@@ -13,6 +13,9 @@ var bubble_panel: PanelContainer
 var bubble_label: Label
 var daily_guide_panel: PanelContainer
 var daily_guide_label: Label
+var sidebar_overlay: ColorRect
+var _stage_title_time_left: float = 3.0
+var _stage_title_prev_id: String = ""
 
 var minimap_bg: ColorRect
 var minimap_player: ColorRect
@@ -1776,6 +1779,16 @@ func _update_mood_feedback(delta: float) -> void:
 		return
 	mood_feedback_label.show()
 
+func _update_stage_title(delta: float) -> void:
+	if not stage_title_label:
+		return
+	if _stage_title_time_left <= 0.0:
+		stage_title_label.hide()
+		return
+	_stage_title_time_left = max(0.0, _stage_title_time_left - delta)
+	if _stage_title_time_left <= 0.0:
+		stage_title_label.hide()
+
 func _show_bump_alert(text: String) -> void:
 	if not bump_alert_label:
 		_setup_bump_alert()
@@ -1818,6 +1831,7 @@ func _process(delta: float) -> void:
 	_update_minimap()
 	_update_bump_alert(delta)
 	_update_mood_feedback(delta)
+	_update_stage_title(delta)
 	if action_hint_label and action_hint_panel and action_hint_panel.visible:
 		action_hint_label.text = _get_action_hint_text()
 	_check_edge_transition()
@@ -2075,6 +2089,13 @@ func _update_bubble():
 func _setup_ui():
 	ui_layer = CanvasLayer.new()
 	
+	# サイドバー表示時の背景暗化オーバーレイ
+	sidebar_overlay = ColorRect.new()
+	sidebar_overlay.color = Color(0, 0, 0, 0.4)
+	sidebar_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	sidebar_overlay.hide()
+	ui_layer.add_child(sidebar_overlay)
+
 	# サイドバー全体を覆うパネル（クラス変数を使用）
 	sidebar = PanelContainer.new()
 	sidebar.set_anchors_preset(Control.PRESET_LEFT_WIDE)
@@ -2184,7 +2205,6 @@ func _setup_ui():
 	daily_guide_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	daily_guide_panel.offset_left = 16
 	daily_guide_panel.offset_top = -58
-	daily_guide_panel.offset_right = 420
 	daily_guide_panel.offset_bottom = -16
 	daily_guide_panel.hide()
 	daily_guide_label = Label.new()
@@ -2196,16 +2216,32 @@ func _setup_ui():
 	daily_guide_panel.add_child(daily_guide_label)
 	ui_layer.add_child(daily_guide_panel)
 
-	# 常時表示する「Q: ステータス設定」ヒントラベル
-	var hint = Label.new()
-	hint.text = "Q: ステータス設定"
-	hint.add_theme_font_size_override("font_size", 14)
-	hint.add_theme_color_override("font_color", Color(1, 1, 1, 0.9))
-	hint.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
-	hint.add_theme_constant_override("outline_size", 4)
-	hint.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	hint.position = Vector2(20, 10)
-	ui_layer.add_child(hint)
+	# 常時表示する「設定」ボタン風パネル
+	var q_panel = PanelContainer.new()
+	var q_style = StyleBoxFlat.new()
+	q_style.bg_color = Color(0, 0, 0, 0.45)
+	q_style.border_width_left = 1
+	q_style.border_width_top = 1
+	q_style.border_width_right = 1
+	q_style.border_width_bottom = 1
+	q_style.border_color = Color(1, 1, 1, 0.25)
+	q_style.corner_radius_top_left = 6
+	q_style.corner_radius_top_right = 6
+	q_style.corner_radius_bottom_right = 6
+	q_style.corner_radius_bottom_left = 6
+	q_style.content_margin_left = 10
+	q_style.content_margin_right = 10
+	q_style.content_margin_top = 5
+	q_style.content_margin_bottom = 5
+	q_panel.add_theme_stylebox_override("panel", q_style)
+	q_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	q_panel.position = Vector2(16, 10)
+	var q_hint = Label.new()
+	q_hint.text = "≡  設定  [Q]"
+	q_hint.add_theme_font_size_override("font_size", 13)
+	q_hint.add_theme_color_override("font_color", Color(1, 1, 1, 0.85))
+	q_panel.add_child(q_hint)
+	ui_layer.add_child(q_panel)
 
 	# ステージ上の自分の位置を示す線（ミニマップ）
 	minimap_bg = ColorRect.new()
@@ -2615,6 +2651,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				return
 		if event.keycode == KEY_Q:
 			if sidebar: sidebar.visible = not sidebar.visible
+			if sidebar_overlay: sidebar_overlay.visible = sidebar.visible
 			_toggle_action_hint()
 		elif event.keycode == KEY_G:
 			_toggle_history_panel()
@@ -2689,9 +2726,7 @@ func _get_action_hint_text() -> String:
 	if _nearby_term_hotspot != "":
 		return "[E] %s" % _get_term_hotspot_prompt(_nearby_term_hotspot)
 	if _nearby_transition_door != "":
-		var dest = _nearby_transition_door.substr("door_to_".length())
-		var dest_name = StageBuilder.get_stage_name(dest, Global.age) if StageBuilder.STAGES.has(dest) else dest
-		return "[E] %s へ移動" % dest_name
+		return "[Q] 設定  [G] 記録"  # [E]はバブルに表示済み
 	if _nearby_height_scale:
 		return "[E] 身長を測る"
 	if _nearby_npc:
@@ -2780,6 +2815,10 @@ func _update_ui():
 	var stage_name: String = StageBuilder.get_stage_name(stage_id, global.age if global else 0)
 	if stage_title_label:
 		stage_title_label.text = stage_name
+		if stage_id != _stage_title_prev_id:
+			_stage_title_prev_id = stage_id
+			_stage_title_time_left = 3.0
+			stage_title_label.show()
 	var m = player.get("m")
 	if not m: return
 	
@@ -2838,6 +2877,9 @@ func _update_daily_guide() -> void:
 
 	daily_guide_label.text = hint_text
 	daily_guide_panel.visible = hint_text != ""
+	if hint_text != "":
+		var min_w = daily_guide_panel.get_combined_minimum_size().x
+		daily_guide_panel.offset_right = daily_guide_panel.offset_left + maxf(min_w, 80.0)
 
 func _queue_dialogue_event_once(global: Node, event_id: String, npc_id: String, dialogue_key: String) -> void:
 	if global == null:

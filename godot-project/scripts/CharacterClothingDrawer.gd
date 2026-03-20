@@ -626,6 +626,7 @@ static func draw_hat_front(ctx: DrawContext, hx: float, hy: float, head_r: float
 				crown_pts.append(Vector2(hx + cos(angle) * crown_w, crown_base_y + sin(angle) * crown_h))
 			ctx.canvas.draw_polygon(crown_pts, PackedColorArray([hat_color]))
 			
+			# TODO より帽子らしくしたい
 			# つば: 髪を含めた頭の幅に合わせて広がる (hair_outer_w + つば追加分)
 			var brim_w = hair_outer_w * 1.35
 			var brim_h = head_r * 0.15
