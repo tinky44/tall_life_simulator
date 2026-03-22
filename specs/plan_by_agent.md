@@ -104,3 +104,27 @@ global.get_school_term_label(age, term) -> String  # "小学1年 1学期"
 - 障害物は `StageBuilder.gd` のオブジェクト定義を流用できるか検討
 - 制服変化はキャラクター描画システムへの色・形パラメータ追加が必要
 - はるかの身長は `global.get_avg_height(age)` で取得（固定値ではなく年齢連動）
+
+
+レビュー結果
+
+Findings
+
+High: この案は「最終学年の主人公」で通しの成長アニメをやる前提ですが、現行フローのエンディング導線は卒業時だけではありません。plan_by_agent.md (line 21) と plan_by_agent.md (line 34) は小→中→高を通しで見せる想定ですが、実装側は Global.gd (line 494) で「小4進級 / 中学 / 高校 / 卒業」の各節目に終了選択を出し、MainScene.gd (line 106) と MainScene.gd (line 931) でそのまま EndingScene.tscn に遷移します。企画側で「卒業専用にする」のか「その時点までの到達段階だけで構成する」のかを先に決めないと、未到達の学校段階を見せるか、既存導線を壊すかのどちらかになります。
+
+→** その時点までの到達段階だけで構成する**
+
+High: EndingScene.tscn を新規作成する前提が、現行実装と衝突しています。plan_by_agent.md (line 53) に対して、すでに EndingScene.gd (line 3) と EndingScene.gd (line 48) で「初期シルエット / はるか / 現在の主人公」の比較画面が実装済みです。このメモだと「既存エンディングを置き換えるのか」「歩行アニメのあとに比較画面へ遷移するのか」「別シーンを挟むのか」が未定義なので、作業分解の出発点が曖昧です。
+
+→歩行アニメのあとに比較画面へ遷移するのか
+
+Medium: 制服変化と身長変化の見せ方に必要なデータ源が不足しています。plan_by_agent.md (line 33) は学校段階ごとの見た目変化を前提にしていますが、現状エンディングが直接使えるのは EndingScene.gd (line 30) の initial_params / initial_appearance と EndingScene.gd (line 52) の current_params / current_appearance だけです。growth_history は Global.gd (line 260) のとおり高さログ中心で、各時点の外見は保持していません。中間制服を年齢から都度再構成するのか、エンディング用スナップショットを保存するのかが決まっていないと、実装に入れません。
+
+Medium: 障害物ごとの動作表が、今あるキャラ制御の粒度と噛み合っていません。plan_by_agent.md (line 27) では鉄棒を「ジャンプして飛び越える」としていますが、現行のプレイヤー側で明示的に扱っている姿勢は SkeletalPlayer.gd (line 190) の normal / taiiku_suwari / chair_sit / sleep で、屈みは character_pose_spec.md (line 21) と character_pose_spec.md (line 228) のように高さ制約ベースです。つまり、この案を実装するには「既存プレイヤーをそのまま動かす」のではなく、エンディング専用の演出リグか、少なくともジャンプ相当の新アニメーション仕様が必要です。
+
+　→ジャンプは不要でもいい。
+
+Open Questions
+
+plan_by_agent.md は、既存の比較エンディングの前段に差し込む案ですか、それとも EndingScene.gd の全面置換ですか。
+早期終了ルートでもこの演出を流す想定なら、「未進学の制服や障害物は出さない」制約を明記したほうが安全です。
