@@ -35,6 +35,9 @@ var _nearby_term_hotspot: String = ""
 var _nearby_obs_id: String = ""
 var _nearby_standup: bool = false
 var _nearby_bed: bool = false
+var _nearby_tent_rest: bool = false
+var _sleep_return_stage_id: String = "myroom"
+var _sleep_return_position_cm: float = 260.0
 
 # アクションヒントパネル（Q キーで切り替え）
 var action_hint_panel: PanelContainer
@@ -754,6 +757,9 @@ func _get_stage_lock_message(stage_id: String) -> String:
 	var global = get_node_or_null("/root/Global")
 	if not global:
 		return ""
+	if stage_id == "room" or stage_id == "myroom":
+		if _is_too_big_for_house_rest(global):
+			return "もう家には入れない……。公園の巨大テントなら休めそう。"
 	# 身長が天井より高い屋内ステージには入れない
 	# if StageBuilder.STAGES.has(stage_id) and player:
 	# 	var ceiling_h = StageBuilder.STAGES[stage_id].get("ceiling_height", null)
@@ -968,10 +974,45 @@ func _get_idle_monologue_text(global: Node) -> String:
 	var monologue_set: Dictionary = STRESS_IDLE_MONOLOGUES.get(stage_bucket, STRESS_IDLE_MONOLOGUES.get("default", {}))
 	return String(monologue_set.get(_get_stress_band(int(global.stress)), ""))
 
+func _is_too_big_for_house_rest(global: Node) -> bool:
+	if not global:
+		return false
+	var actual_h: float = float(global.current_params.get("height", 0.0))
+	if actual_h <= 0.0 and player:
+		var measurements_variant: Variant = player.get("m")
+		if measurements_variant is Dictionary:
+			var measurements: Dictionary = measurements_variant
+			actual_h = float(measurements.get("height", 0.0))
+	if actual_h <= 0.0:
+		return false
+	var ceiling_h = StageBuilder.STAGES.get("myroom", {}).get("ceiling_height", null)
+	if ceiling_h == null:
+		return actual_h >= 400.0
+	return actual_h * 0.60 > float(ceiling_h)
+
+func _is_park_tent_rest_available(global: Node) -> bool:
+	return global != null and _is_too_big_for_house_rest(global)
+
+func _is_home_event_fallback_stage(stage_id: String, global: Node) -> bool:
+	return stage_id == "park" and _is_park_tent_rest_available(global)
+
+func _get_park_rest_guidance_text(global: Node) -> String:
+	if not _is_too_big_for_house_rest(global):
+		return ""
+	var stage_id: String = String(global.current_stage_id)
+	if stage_id == "outdoor":
+		return "家では休めない。左へ進んで公園の巨大テントへ向かおう"
+	if stage_id == "park":
+		return "家では休めない。巨大テントまで行けば休める"
+	return ""
+
 func _get_default_action_hint_text() -> String:
 	var global = get_node_or_null("/root/Global")
 	if not global:
 		return "[Q] 設定  [G] 記録  [E] 調べる"
+	var park_rest_hint: String = _get_park_rest_guidance_text(global)
+	if park_rest_hint != "":
+		return park_rest_hint
 	var band: String = _get_stress_band(int(global.stress))
 	var stage_bucket: String = _get_stage_mood_bucket(String(global.current_stage_id))
 	var vball_phase: int = Global.vball_story_phase
@@ -1972,6 +2013,7 @@ func _update_bubble():
 				_nearby_height_scale = false
 				_nearby_term_hotspot = ""
 				_nearby_bed = false
+				_nearby_tent_rest = false
 				_nearby_obs_id = "refrigerator"
 				bubble_label.text = StageBuilder.get_obstacle_comment("refrigerator", m["height"], float(child.get_meta("obs_height_cm")))
 				bubble_label.text += "\n[Eキー] 開ける"
@@ -1996,6 +2038,7 @@ func _update_bubble():
 				_nearby_height_scale = false
 				_nearby_term_hotspot = ""
 				_nearby_bed = false
+				_nearby_tent_rest = false
 				_nearby_standup = false
 				_nearby_obs_id = ""
 				if lock_message != "":
@@ -2016,6 +2059,7 @@ func _update_bubble():
 		_nearby_height_scale = false
 		_nearby_term_hotspot = ""
 		_nearby_bed = false
+		_nearby_tent_rest = false
 		bubble_label.text = "[Eキー] 話しかける"
 		bubble_panel.show()
 		bubble_panel.position = _get_bubble_screen_pos()
@@ -2049,11 +2093,24 @@ func _update_bubble():
 			_nearby_height_scale = false
 			_nearby_term_hotspot = ""
 			_nearby_bed = true
+			_nearby_tent_rest = false
+			_nearby_obs_id = String(obs_id)
+			_nearby_standup = false
+			bubble_label.text += "\n[E] 休む"
+		elif obs_id == "giant_tent" and global and String(global.current_stage_id) == "park" and _is_park_tent_rest_available(global):
+			_nearby_transition_door = ""
+			_nearby_height_scale = false
+			_nearby_term_hotspot = ""
+			_nearby_bed = false
+			_nearby_tent_rest = true
+			_nearby_obs_id = String(obs_id)
+			_nearby_standup = false
 			bubble_label.text += "\n[E] 休む"
 		elif hotspot_id != "":
 			_nearby_transition_door = ""
 			_nearby_height_scale = false
 			_nearby_bed = false
+			_nearby_tent_rest = false
 			_nearby_obs_id = String(obs_id)
 			# 着席中かつ chair_sit ホットスポットなら「立ち上がる」に切り替え
 			var hotspot_pose: String = String(TERM_HOTSPOTS[hotspot_id].get("pose", ""))
@@ -2072,6 +2129,7 @@ func _update_bubble():
 			_nearby_obs_id = ""
 			_nearby_standup = false
 			_nearby_bed = false
+			_nearby_tent_rest = false
 			if lock_message != "":
 				_nearby_transition_door = ""
 				bubble_label.text = lock_message
@@ -2085,6 +2143,7 @@ func _update_bubble():
 			_nearby_obs_id = String(obs_id)
 			_nearby_standup = false
 			_nearby_bed = false
+			_nearby_tent_rest = false
 			bubble_label.text += "\n[Eキー] 身長を測る"
 		else:
 			_nearby_transition_door = ""
@@ -2093,6 +2152,7 @@ func _update_bubble():
 			_nearby_obs_id = ""
 			_nearby_standup = false
 			_nearby_bed = false
+			_nearby_tent_rest = false
 
 		bubble_panel.show()
 		bubble_panel.position = _get_bubble_screen_pos()
@@ -2103,6 +2163,7 @@ func _update_bubble():
 		_nearby_obs_id = ""
 		_nearby_standup = false
 		_nearby_bed = false
+		_nearby_tent_rest = false
 		if _in_dialogue or _measurement_showing or _term_choice_showing or _sleep_menu_showing:
 			bubble_panel.hide()
 			return
@@ -2553,14 +2614,22 @@ func _confirm_sleep_menu_default() -> void:
 		return
 	_on_sleep_menu_selected(_sleep_menu_current_options[0])
 
-func _trigger_bed_interaction() -> void:
+func _trigger_rest_interaction(return_stage_id: String, return_position_cm: float) -> void:
 	var global = get_node_or_null("/root/Global")
 	if not global:
 		return
+	_sleep_return_stage_id = return_stage_id
+	_sleep_return_position_cm = return_position_cm
 	var opts: Array = ["今日を終える"]
 	if int(global.day_in_term) < int(global.term_total_days) - 2:
 		opts.append("学期末まで一気に進める")
 	_show_sleep_menu(opts)
+
+func _trigger_bed_interaction() -> void:
+	_trigger_rest_interaction("myroom", 260.0)
+
+func _trigger_giant_tent_interaction() -> void:
+	_trigger_rest_interaction("park", 1660.0)
 
 func _on_sleep_menu_selected(choice: String) -> void:
 	var global = get_node_or_null("/root/Global")
@@ -2615,17 +2684,26 @@ func _run_sleep_transition() -> void:
 		_in_sleep_dialogue_wait = true
 		_start_dialogue("narrator", pain_key)
 		await _wait_for_dialogue_end()
-	global.current_stage_id = "myroom"
+	var target_stage_id: String = _resolve_stage_id(_sleep_return_stage_id)
+	if not StageBuilder.STAGES.has(target_stage_id):
+		target_stage_id = "myroom"
+	var wake_position_cm: float = _sleep_return_position_cm
+	if StageBuilder.STAGES.has(target_stage_id):
+		var stage_width_cm: float = float(StageBuilder.STAGES[target_stage_id]["width"])
+		wake_position_cm = clamp(wake_position_cm, 50.0, stage_width_cm - 50.0)
+	global.current_stage_id = target_stage_id
 	if player and player.has_method("update_measurements"):
 		player.call("update_measurements")
 	await _load_stage()
 	# 起床後のスポーン位置をベッド(x=30〜230cm)の右隣に設定
 	# 高身長時は天井との衝突で押し出しが発生するため、1フレーム衝突を無効化してから戻す
 	if player:
-		player.position = Vector2(260 * p, 0)
+		player.position = Vector2(wake_position_cm * p, 0)
 		player.collision_shape.disabled = true
 		await get_tree().process_frame
 		player.collision_shape.disabled = false
+	_sleep_return_stage_id = "myroom"
+	_sleep_return_position_cm = 260.0
 	_update_actions_hud()
 	var tw_out = create_tween()
 	tw_out.tween_property(fade, "color:a", 0.0, 0.45)
@@ -2696,6 +2774,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				_do_standup()
 			elif _nearby_bed:
 				_trigger_bed_interaction()
+			elif _nearby_tent_rest:
+				_trigger_giant_tent_interaction()
 			elif _nearby_obs_id == "refrigerator":
 				_start_dialogue("narrator", "refrigerator_milk")
 			elif _nearby_obs_id == "vending_machine" or _nearby_obs_id == "station_vending":
@@ -2748,7 +2828,7 @@ func _get_action_hint_text() -> String:
 		return "[E] 次へ"
 	if _measurement_showing:
 		return "[E] 閉じる"
-	if _nearby_bed:
+	if _nearby_bed or _nearby_tent_rest:
 		return "[E] 休む"
 	if _measurement_showing:
 		return "[E] 次の学期へ進む"
@@ -3034,7 +3114,7 @@ func _handle_pending_stage_event(global: Node, stage_id: String, ev: String) -> 
 			_defer_pending_stage_event(global, ev)
 			return false
 	elif ev == "term_end_measurement":
-		if stage_id == "myroom":
+		if stage_id == "myroom" or _is_home_event_fallback_stage(stage_id, global):
 			await get_tree().create_timer(0.4).timeout
 			global.advance_term()
 			if player and player.has_method("update_measurements"):
@@ -3166,6 +3246,8 @@ func _trigger_too_big_for_house() -> void:
 	if not global:
 		return
 	_edge_transition_running = true
+	_nearby_bed = false
+	_nearby_tent_rest = false
 	# フェードアウト
 	var fade = ColorRect.new()
 	fade.color = Color(0, 0, 0, 0)
@@ -3262,6 +3344,7 @@ func _enter_edge_transition(target_stage: String) -> void:
 	global.current_stage_id = resolved_target
 	global.actions_today += 1
 	_nearby_bed = false
+	_nearby_tent_rest = false
 	_update_actions_hud()
 	_load_stage()
 	if player:
@@ -3530,6 +3613,7 @@ func _enter_transition_door() -> void:
 
 	_nearby_transition_door = ""
 	_nearby_bed = false
+	_nearby_tent_rest = false
 	_load_stage()
 
 	# 遷移先の「戻り口ドア」の近くにスポーン

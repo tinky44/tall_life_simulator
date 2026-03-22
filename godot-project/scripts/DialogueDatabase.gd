@@ -211,6 +211,7 @@ const DATA: Dictionary = {
 	"player": {
 		"too_big_for_house": [
 			{"speaker": "（主人公）", "text": "家より大きくなっちゃった……。"},
+			{"speaker": "（主人公）", "text": "左の公園にある巨大テントなら、休めるかも。"},
 		],
 		"too_big_for_school": [
 			{"speaker": "（主人公）", "text": "学校より大きくなっちゃった……。"},
