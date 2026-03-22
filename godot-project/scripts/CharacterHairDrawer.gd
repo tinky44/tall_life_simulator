@@ -204,7 +204,7 @@ static func draw_hair(ctx: DrawContext, head_center: Vector2, head_r: float, hea
 			# 【調整用】弧の終端角。PI/2 = 後頭部。より下に伸ばすには値を大きくする（例: PI*0.6）
 			var arc_end_ang = PI *(0.9)
 			if hair_style == "short_boy":
-				arc_end_ang = PI * 0.88
+				arc_end_ang = PI * 0.90
 			var arc_full_steps = 20
 			hair_pts.append(dome_center) # 扇形の中心
 			for i in range(arc_full_steps + 1):
@@ -287,7 +287,7 @@ static func draw_hair(ctx: DrawContext, head_center: Vector2, head_r: float, hea
 		if hair_style == "short_boy":
 			bangs_pts = PackedVector2Array([
 				p1,
-				p1 + fwd_dir * hr * 0.18 + down_dir * hr * 0.22,
+				p1 + fwd_dir * hr * 0.18 + down_dir * hr * 0.32,
 				p1.lerp(fan_center, 0.28) + down_dir * hr * 0.06
 			])
 		ctx.canvas.draw_polygon(bangs_pts, PackedColorArray([hair_color]))
