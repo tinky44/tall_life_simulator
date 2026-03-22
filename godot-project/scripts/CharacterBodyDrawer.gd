@@ -177,6 +177,44 @@ static func get_side_sailor_waist_pos(ctx: DrawContext) -> Vector2:
 		anchor = anchor.lerp(garment_anchor, seated_blend)
 	return anchor
 
+static func _build_side_jumper_chair_skirt_quad(ctx: DrawContext, belt_back: Vector2, belt_front: Vector2,
+		crotch_pos: Vector2, knee_l: Vector2, knee_r: Vector2, ankle_l: Vector2, ankle_r: Vector2,
+		skirt_length: float) -> Dictionary:
+	var front_knee: Vector2 = knee_l if knee_l.x >= knee_r.x else knee_r
+	var front_ankle: Vector2 = ankle_l if ankle_l.x >= ankle_r.x else ankle_r
+	var thigh_cover = max(ctx.thigh_w, 10.0)
+	var shin_cover = max(ctx.shin_w, 8.0)
+
+	var back_hem = Vector2(
+		min(crotch_pos.x - thigh_cover * 0.82, belt_back.x - thigh_cover * 0.28),
+		max(crotch_pos.y + thigh_cover * 0.88, belt_back.y + skirt_length * 0.72)
+	)
+	var front_hem = Vector2(
+		max(front_knee.x + shin_cover * 0.35, belt_front.x + thigh_cover * 1.2),
+		max(front_knee.y + thigh_cover * 0.28, belt_front.y + skirt_length * 1.08)
+	)
+	var front_limit_y = front_ankle.y - shin_cover * 0.4
+	var front_floor_y = front_knee.y + max(thigh_cover * 0.55, 8.0)
+	if front_limit_y > front_knee.y + 6.0:
+		front_hem.y = clamp(front_floor_y, front_knee.y + 6.0, front_limit_y)
+	else:
+		front_hem.y = max(front_hem.y, front_floor_y)
+	var knee_cover_x = front_knee.x + max(shin_cover * 0.95, thigh_cover * 0.65, 10.0)
+	var knee_ratio = clamp((front_knee.y - belt_front.y) / max(front_hem.y - belt_front.y, 1.0), 0.18, 0.92)
+	var required_front_hem_x = belt_front.x + (knee_cover_x - belt_front.x) / knee_ratio
+	front_hem.x = max(front_hem.x, required_front_hem_x)
+	var front_cap_x = max(front_ankle.x + max(shin_cover * 1.6, thigh_cover * 1.15), knee_cover_x + thigh_cover * 1.1)
+	front_hem.x = min(front_hem.x, front_cap_x)
+	front_hem.x = max(front_hem.x, belt_front.x + 8.0)
+	back_hem.x = min(back_hem.x, belt_back.x - 4.0)
+	back_hem.y = max(back_hem.y, front_hem.y + thigh_cover * 0.3)
+
+	return {
+		"back_hem": back_hem,
+		"front_hem": front_hem,
+		"points": PackedVector2Array([belt_back, back_hem, front_hem, belt_front]),
+	}
+
 static func _normalized_or(v: Vector2, fallback: Vector2) -> Vector2:
 	if v.length() > 0.01:
 		return v.normalized()
@@ -449,6 +487,33 @@ static func draw_skirt(ctx: DrawContext, bottoms_type: String, bottoms_color: Co
 		var shin_draw = max(d["shin_l"] - foot_h, d["shin_l"] * 0.45)
 		var ankle_l = knee_l + Vector2(cos(ang_l + d["knee_l"]), sin(ang_l + d["knee_l"])) * shin_draw
 		var ankle_r = knee_r + Vector2(cos(ang_r + d["knee_r"]), sin(ang_r + d["knee_r"])) * shin_draw
+
+		if is_jumper_skirt and ctx.pose == "chair_sit":
+			var chair_quad = _build_side_jumper_chair_skirt_quad(ctx, belt_back, belt_front, crotch_pos, knee_l, knee_r, ankle_l, ankle_r, skirt_length)
+			var chair_back_hem: Vector2 = chair_quad["back_hem"]
+			var chair_front_hem: Vector2 = chair_quad["front_hem"]
+			var chair_pts: PackedVector2Array = chair_quad["points"]
+			ctx.canvas.draw_polygon(chair_pts, PackedColorArray([bottoms_color]))
+
+			var pleat_col = bottoms_color.darkened(0.2)
+			for i in range(1, 7):
+				var t = float(i) / 7.0
+				var top_p = belt_back.lerp(belt_front, t)
+				var bot_p = chair_back_hem.lerp(chair_front_hem, t)
+				var center_drop = max(ctx.thigh_w * 0.18, 4.0) * (1.0 - abs(t - 0.5) * 2.0)
+				var mid_p = top_p.lerp(bot_p, 0.55) + Vector2(0, center_drop)
+				ctx.canvas.draw_polyline(PackedVector2Array([top_p, mid_p, bot_p]), pleat_col, 1.5)
+
+			var belt_color = bottoms_color.darkened(0.35)
+			var belt_h = 7.0
+			var belt_pts = PackedVector2Array([
+				belt_back,
+				belt_front,
+				belt_front + torso_u * belt_h,
+				belt_back + torso_u * belt_h,
+			])
+			ctx.canvas.draw_polygon(belt_pts, PackedColorArray([belt_color]))
+			return
 
 		var outer_candidates: Array = []
 		var lower_candidates: Array = []
