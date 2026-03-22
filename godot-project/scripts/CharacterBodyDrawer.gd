@@ -185,29 +185,30 @@ static func _build_side_jumper_chair_skirt_quad(ctx: DrawContext, belt_back: Vec
 	var thigh_cover = max(ctx.thigh_w, 10.0)
 	var shin_cover = max(ctx.shin_w, 8.0)
 
-	var back_hem = Vector2(
+	var back_target = Vector2(
 		min(crotch_pos.x - thigh_cover * 0.82, belt_back.x - thigh_cover * 0.28),
 		max(crotch_pos.y + thigh_cover * 0.88, belt_back.y + skirt_length * 0.72)
 	)
-	var front_hem = Vector2(
-		max(front_knee.x + shin_cover * 0.35, belt_front.x + thigh_cover * 1.2),
-		max(front_knee.y + thigh_cover * 0.28, belt_front.y + skirt_length * 1.08)
-	)
 	var front_limit_y = front_ankle.y - shin_cover * 0.4
 	var front_floor_y = front_knee.y + max(thigh_cover * 0.55, 8.0)
+	var front_target_y = max(front_knee.y + 6.0, front_floor_y)
 	if front_limit_y > front_knee.y + 6.0:
-		front_hem.y = clamp(front_floor_y, front_knee.y + 6.0, front_limit_y)
-	else:
-		front_hem.y = max(front_hem.y, front_floor_y)
+		front_target_y = clamp(front_floor_y, front_knee.y + 6.0, front_limit_y)
 	var knee_cover_x = front_knee.x + max(shin_cover * 0.95, thigh_cover * 0.65, 10.0)
-	var knee_ratio = clamp((front_knee.y - belt_front.y) / max(front_hem.y - belt_front.y, 1.0), 0.18, 0.92)
+	var knee_ratio = clamp((front_knee.y - belt_front.y) / max(front_target_y - belt_front.y, 1.0), 0.18, 0.92)
 	var required_front_hem_x = belt_front.x + (knee_cover_x - belt_front.x) / knee_ratio
-	front_hem.x = max(front_hem.x, required_front_hem_x)
 	var front_cap_x = max(front_ankle.x + max(shin_cover * 1.6, thigh_cover * 1.15), knee_cover_x + thigh_cover * 1.1)
-	front_hem.x = min(front_hem.x, front_cap_x)
-	front_hem.x = max(front_hem.x, belt_front.x + 8.0)
-	back_hem.x = min(back_hem.x, belt_back.x - 4.0)
-	back_hem.y = max(back_hem.y, front_hem.y + thigh_cover * 0.3)
+	var front_target = Vector2(
+		min(max(required_front_hem_x, belt_front.x + 8.0), front_cap_x),
+		front_target_y
+	)
+
+	var back_dir = _normalized_or(back_target - belt_back, Vector2(-0.25, 1.0))
+	var front_dir = _normalized_or(front_target - belt_front, Vector2(0.85, 1.0))
+	# 座り時も布の前後辺長は立ち時のスカート丈と同じに保ち、下端の回転で形を作る。
+	var side_len = skirt_length
+	var back_hem = belt_back + back_dir * side_len
+	var front_hem = belt_front + front_dir * side_len
 
 	return {
 		"back_hem": back_hem,
