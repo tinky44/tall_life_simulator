@@ -497,19 +497,18 @@ func _transition_to_stage(stage: Dictionary) -> void:
 		return
 
 	# 主人公: 新しい身長・制服に更新
-	var old_vh: float = _protagonist.visual_height_cm
+	# visual_height_cm を新身長に即時セットすることで屈みポーズ判定を防ぐ
 	_protagonist.custom_params = _make_params(stage["height"]).duplicate(true)
 	_protagonist.custom_appearance = _build_protagonist_appearance(stage["repr_age"]).duplicate(true)
 	_protagonist.update_measurements()
-	_protagonist.visual_height_cm = old_vh  # 滑らかに遷移するため元の値を保持
+	_protagonist.visual_height_cm = stage["height"]
 
 	# はるか: 年齢相応の平均身長に更新
-	var old_haruka_vh: float = _haruka.visual_height_cm
 	var haruka_h: float = _global.get_avg_height(stage["age"])
 	_haruka.custom_params = _make_params_haruka(haruka_h).duplicate(true)
 	_haruka.custom_appearance = _build_haruka_appearance(stage["repr_age"]).duplicate(true)
 	_haruka.update_measurements()
-	_haruka.visual_height_cm = old_haruka_vh
+	_haruka.visual_height_cm = haruka_h
 
 	# フラッシュ戻し
 	var tw2 := create_tween()
