@@ -99,8 +99,7 @@ var _last_soft_limit_notice_key: String = ""
 var _crouch_impossible_notified: bool = false
 var _crouch_impossible_suppress_timer: float = 0.0
 
-const CAMERA_HEIGHT_OFFSET_RATIO := 0.4
-const CAMERA_FOOT_MARGIN_PX := 180.0
+const CAMERA_FOOT_MARGIN_PX := 66.0
 const CAMERA_TOP_PIN_MARGIN_PX := 0.0
 const CAMERA_MIN_FRAME_HEIGHT_CM := 170.0  # 低身長でも下端を固定するための基準高
 
@@ -672,7 +671,8 @@ func _get_camera_frame_top_cm(stage_id: String, height_cm: float) -> float:
 func _get_camera_limit_bottom_px(viewport_height_px: float, zoom_y: float, frame_top_cm: float) -> int:
 	var safe_zoom: float = maxf(zoom_y, 0.001)
 	var visible_height_world: float = viewport_height_px / safe_zoom
-	var desired_bottom_y: float = visible_height_world - frame_top_cm * p - CAMERA_TOP_PIN_MARGIN_PX / safe_zoom
+	var baseline_frame_top_cm: float = minf(frame_top_cm, CAMERA_MIN_FRAME_HEIGHT_CM)
+	var desired_bottom_y: float = visible_height_world - baseline_frame_top_cm * p - CAMERA_TOP_PIN_MARGIN_PX / safe_zoom
 	return int(ceilf(maxf(desired_bottom_y, 0.0)))
 
 func _apply_player_camera_offset(cam: Camera2D = null, adjust_zoom: bool = true) -> void:
@@ -702,11 +702,10 @@ func _apply_player_camera_offset(cam: Camera2D = null, adjust_zoom: bool = true)
 		var content_height_world: float = maxf(frame_top_cm * p, 1.0)
 		var new_zoom: float = minf(available_height_px / content_height_world, 1.0)
 		target_cam.zoom = Vector2(new_zoom, new_zoom)
-	var desired_offset_y: float = -maxf(height_cm, CAMERA_MIN_FRAME_HEIGHT_CM) * p * CAMERA_HEIGHT_OFFSET_RATIO
 	var ceiling_offset_y: float = -frame_top_cm * p + (viewport_height_px * 0.5 - CAMERA_TOP_PIN_MARGIN_PX) / float(target_cam.zoom.y)
-	var max_upward_offset_y: float = -(viewport_height_px * 0.5 - CAMERA_FOOT_MARGIN_PX) / float(target_cam.zoom.y)
-	var raw_offset_y: float = minf(desired_offset_y, ceiling_offset_y)
-	target_cam.offset = Vector2(0, maxf(raw_offset_y, max_upward_offset_y))
+	var foot_pinned_offset_y: float = -(viewport_height_px * 0.5 - CAMERA_FOOT_MARGIN_PX) / float(target_cam.zoom.y)
+	# 足元は常に同じスクリーン位置へ固定しつつ、必要なときだけ上端側の制約を優先する。
+	target_cam.offset = Vector2(0, minf(foot_pinned_offset_y, ceiling_offset_y))
 
 func _get_stage_uniform_age(stage_id: String) -> int:
 	var global = get_node_or_null("/root/Global")
