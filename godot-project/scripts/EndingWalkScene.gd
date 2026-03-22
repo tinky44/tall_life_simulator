@@ -14,17 +14,10 @@ const HARUKA_BASE_APPEARANCE := {
 	"bag_type": "none", "bag_color": "#000000",
 }
 
-const LEVEL_LABELS := {
-	0: "小学校 低学年",
-	1: "小学校 高学年",
-	2: "中学校",
-	3: "高校",
-}
-const LEVEL_REPR_AGES := {0: 7, 1: 10, 2: 13, 3: 16}
-
 const WALK_SPEED := 10.0
 const SCROLL_SPEED := 80.0
-const STAGE_DURATION := 5.0
+const STAGE_DURATION_MIN := 2.0  # ステージ数が多い場合の最短表示秒数
+const STAGE_DURATION_MAX := 4.0  # ステージ数が少ない場合の最長表示秒数
 const SCENERY_STRIP_WIDTH := 2000.0
 const HEIGHT_LERP_SPEED := 8.0
 
@@ -100,31 +93,38 @@ func _build_growth_stages() -> Array:
 	if history.is_empty():
 		return []
 
-	# growth_history を学校レベル (0-3) でグルーピング、各レベルの最終エントリを採用
-	var last_per_level := {}
+	# growth_history の各エントリを1ステージとして使用（age+term の重複は除去）
+	var seen := {}
+	var stages := []
 	for entry in history:
 		var age_val: int = int(entry.get("age", 6))
-		var level: int = Global._school_level_from_age(age_val)
-		if level <= 3:
-			last_per_level[level] = entry
-
-	var stages := []
-	for level in [0, 1, 2, 3]:
-		if not last_per_level.has(level):
+		var term_val: int = int(entry.get("term", 1))
+		var key := "%d_%d" % [age_val, term_val]
+		if seen.has(key):
 			continue
-		var entry: Dictionary = last_per_level[level]
-		var age_val: int = int(entry.get("age", LEVEL_REPR_AGES[level]))
-		var height_val: float = float(entry.get("height", 120.0))
-		var repr_age: int = LEVEL_REPR_AGES[level]
-
+		seen[key] = true
 		stages.append({
-			"level": level,
-			"label": LEVEL_LABELS[level],
+			"label": Global.get_school_term_label(age_val, term_val),
 			"age": age_val,
-			"height": height_val,
+			"height": float(entry.get("height", 120.0)),
 			"avg_height": float(entry.get("avg_height", _global.get_avg_height(age_val))),
-			"repr_age": repr_age,
+			"repr_age": age_val,
 		})
+
+	# 現在の状態が未記録なら最終ステージとして補完
+	var cur_age: int = int(_global.age)
+	var cur_term: int = int(_global.term)
+	var cur_height: float = float(_global.current_params.get("height", 0.0))
+	var cur_key := "%d_%d" % [cur_age, cur_term]
+	if not seen.has(cur_key) and cur_height > 0.0:
+		stages.append({
+			"label": Global.get_school_term_label(cur_age, cur_term),
+			"age": cur_age,
+			"height": cur_height,
+			"avg_height": _global.get_avg_height(cur_age),
+			"repr_age": cur_age,
+		})
+
 	return stages
 
 
@@ -436,6 +436,12 @@ func _run_animation() -> void:
 		_transition_to_ending()
 		return
 
+	# ステージ数に応じて表示時間を動的に決定
+	var stage_dur: float = clampf(
+		30.0 / max(_growth_stages.size(), 1),
+		STAGE_DURATION_MIN, STAGE_DURATION_MAX
+	)
+
 	# (1) 暗転からフェードイン
 	var tw_in := create_tween()
 	tw_in.tween_property(_fade_overlay, "color:a", 0.0, 0.8)
@@ -449,7 +455,7 @@ func _run_animation() -> void:
 	# (3) 最初の段階を表示
 	_show_labels(_growth_stages[0])
 
-	await get_tree().create_timer(STAGE_DURATION).timeout
+	await get_tree().create_timer(stage_dur).timeout
 	if _skipped:
 		return
 
@@ -458,7 +464,7 @@ func _run_animation() -> void:
 		await _transition_to_stage(_growth_stages[i])
 		if _skipped:
 			return
-		await get_tree().create_timer(STAGE_DURATION).timeout
+		await get_tree().create_timer(stage_dur).timeout
 		if _skipped:
 			return
 
