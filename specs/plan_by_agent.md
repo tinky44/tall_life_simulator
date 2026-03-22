@@ -48,9 +48,59 @@ https://ontama-m.com/ongaku_akarui.html
 
 ---
 
+## 成長記録データ構造（Global.gd）
+
+エンディングアニメーションの各フレームは `global.growth_history` の記録に従って描画する。
+
+```gdscript
+# Global.gd
+var growth_history: Array = []
+
+# 各エントリの構造
+{
+    "term":       int,    # 学期番号（小1=6、中1=27、高1=36）
+    "age":        int,    # 年齢（6〜18）
+    "height":     float,  # その時点の身長（cm）
+    "avg_height": float,  # 学年平均身長（cm）
+    "diff_avg":   float,  # 平均との差（height - avg_height）
+    "diff_prev":  float,  # 前回測定からの差（cm）
+    "source":     String  # "start" / "measurement"
+}
+```
+
+### 平均身長定数（はるかの身長として使用）
+
+```gdscript
+const AVG_HEIGHT_FEMALE: Dictionary = {
+    6: 113.0, 7: 119.0, 8: 124.0, 9: 130.0, 10: 136.0, 11: 143.0,
+    12: 150.0, 13: 154.0, 14: 156.0, 15: 157.0, 16: 158.0, 17: 158.5, 18: 158.5
+}
+# 取得: global.get_avg_height(age)
+```
+
+### エンディングアニメーションへの活用方針
+
+- `growth_history[0]` → ゲーム開始時（小学生）の身長・制服
+- `growth_history[-1]` → 最終測定時の身長・制服
+- 各エントリの `age` から制服・学校種別を判定
+  - 6〜11歳：小学生、12〜14歳：中学生、15〜17歳：高校生
+- `entry["height"]` と `global.get_avg_height(entry["age"])` の比率でキャラクター描画スケールを決定
+- アニメーション中の身長変化は history をキーフレームとして補間
+
+### 学年変換ユーティリティ（Global.gd）
+
+```gdscript
+global.term_to_age(t: int) -> int
+global.age_to_term(a: int) -> int
+global.get_school_term_label(age, term) -> String  # "小学1年 1学期"
+```
+
+---
+
 ## 実装メモ（未着手）
 
-- エンディングシーン専用の `EndingScene.tscn` を新規作成する想定
+- `EndingScene.tscn` はすでに存在する → `EndingScene.gd` を拡張する
 - 横スクロール演出はTween or AnimationPlayerで制御
 - 障害物は `StageBuilder.gd` のオブジェクト定義を流用できるか検討
 - 制服変化はキャラクター描画システムへの色・形パラメータ追加が必要
+- はるかの身長は `global.get_avg_height(age)` で取得（固定値ではなく年齢連動）
