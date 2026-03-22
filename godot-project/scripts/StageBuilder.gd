@@ -8,7 +8,7 @@ const STAGES = {
         "ceiling_height": 240,
         "obstacles": [
             {"id": "door_to_outdoor", "x": 100, "x2": 180, "height": 200, "type": "overhead"},
-            {"id": "ceiling_light", "x": 280, "x2": 380, "height": 200, "type": "overhead"},
+            {"id": "ceiling_light", "x": 150, "x2": 250, "height": 200, "type": "overhead"},
             {"id": "refrigerator", "x": 380, "x2": 440, "height": 180, "type": "background"},
             {"id": "kitchen_cabinet", "x": 440, "x2": 550, "height": 180, "type": "background"},
             {"id": "kitchen_counter", "x": 440, "x2": 640, "height": 80, "type": "ground"},
@@ -60,6 +60,7 @@ const STAGES = {
             {"id": "platform_column_1", "x": 520, "x2": 575, "height": 250, "type": "background"},
             {"id": "platform_bench", "x": 860, "x2": 1060, "height": 42, "type": "ground"},
             {"id": "platform_column_2", "x": 1340, "x2": 1395, "height": 250, "type": "background"},
+            {"id": "station_name_sign", "x": 1480, "x2": 1760, "height": 220, "type": "background"},
             {"id": "door_to_train", "x": 1880, "x2": 2060, "height": 185, "type": "overhead"}
         ]
     },
@@ -81,12 +82,12 @@ const STAGES = {
         "ceiling_height": null,
         "obstacles": [
             {"id": "door_to_gakuenmae", "x": 80, "x2": 220, "height": 200, "type": "overhead"},
-            {"id": "bus", "x": 250, "x2": 560, "height": 300, "type": "background"},
-            {"id": "shop_awning", "x": 620, "x2": 860, "height": 200, "type": "background"},
+            {"id": "bus", "x": 250, "x2": 560, "height": 230, "type": "background"},
+            {"id": "shop_awning", "x": 620, "x2": 880, "height": 200, "type": "background"},
             {"id": "notice_board_town", "x": 980, "x2": 1130, "height": 180, "type": "background"},
             {"id": "vending_machine", "x": 1280, "x2": 1360, "height": 183, "type": "ground"},
-            {"id": "school_gate_high", "x": 1820, "x2": 1980, "height": 180, "type": "background"},
-            {"id": "door_to_school_hallway_high", "x": 1980, "x2": 2140, "height": 200, "type": "overhead"}
+            {"id": "school_gate_high", "x": 1740, "x2": 1930, "height": 220, "type": "background"},
+            {"id": "door_to_school_hallway_high", "x": 1930, "x2": 2160, "height": 240, "type": "overhead"}
         ]
     },
     "adjacent_town": {
@@ -94,10 +95,8 @@ const STAGES = {
         "width": 1500,
         "ceiling_height": null,
         "obstacles": [
-            {"id": "town_tree", "x": 260, "x2": 340, "height": 220, "type": "background"},
             {"id": "town_bench", "x": 620, "x2": 800, "height": 42, "type": "ground"},
-            {"id": "school_gate_middle", "x": 1120, "x2": 1260, "height": 210, "type": "background"},
-            {"id": "door_to_school_hallway_middle", "x": 1260, "x2": 1410, "height": 200, "type": "overhead"}
+            {"id": "door_to_school_hallway_middle", "x": 1140, "x2": 1390, "height": 220, "type": "overhead"}
         ]
     },
     "outdoor": {
@@ -105,14 +104,14 @@ const STAGES = {
         "width": 1500,
         "ceiling_height": null,
         "obstacles": [
-            {"id": "door_to_room", "x": 50, "x2": 130, "height": 200, "type": "overhead"},
-            {"id": "mailbox", "x": 200, "x2": 235, "height": 119, "type": "background"},
-            {"id": "traffic_signal", "x": 290, "x2": 318, "height": 250, "type": "background"},
-            {"id": "vending_machine", "x": 450, "x2": 530, "height": 183, "type": "ground"},
-            {"id": "door_to_station", "x": 650, "x2": 750, "height": 200, "type": "overhead"},
-            {"id": "car", "x": 760, "x2": 930, "height": 150, "type": "background"},
-            {"id": "bus_stop_sign", "x": 940, "x2": 968, "height": 250, "type": "background"},
-            {"id": "door_to_school_hallway_elementary", "x": 1050, "x2": 1150, "height": 200, "type": "overhead"}
+            {"id": "door_to_room", "x": 180, "x2": 270, "height": 220, "type": "overhead"},
+            {"id": "mailbox", "x": 80, "x2": 115, "height": 119, "type": "background"},
+            {"id": "vending_machine", "x": 470, "x2": 550, "height": 183, "type": "ground"},
+            {"id": "door_to_station", "x": 690, "x2": 790, "height": 200, "type": "overhead"},
+            {"id": "car", "x": 810, "x2": 990, "height": 150, "type": "background"},
+            {"id": "bus_stop_sign", "x": 1025, "x2": 1053, "height": 250, "type": "background"},
+            {"id": "door_to_school_hallway_elementary", "x": 1100, "x2": 1250, "height": 220, "type": "overhead"},
+            {"id": "traffic_signal", "x": 1215, "x2": 1243, "height": 250, "type": "background"}
         ]
     },
     "park": {
@@ -177,11 +176,10 @@ const STAGES = {
         "obstacles": [
             {"id": "bed", "x": 30, "x2": 230, "height": 50, "type": "ground"},
             {"id": "window_myroom", "x": 50, "x2": 190, "height": 155, "type": "background"},
-            {"id": "ceiling_light", "x": 250, "x2": 345, "height": 200, "type": "overhead"},
             {"id": "bookshelf", "x": 295, "x2": 355, "height": 195, "type": "background"},
-            {"id": "chair", "x": 360, "x2": 400, "height": 45, "type": "ground"},
+            {"id": "chair_left", "x": 360, "x2": 400, "height": 45, "type": "ground"},
             {"id": "desk_myroom", "x": 415, "x2": 550, "height": 72, "type": "ground"},
-            {"id": "randoseru", "x": 560, "x2": 597, "height": 35, "type": "ground"},
+            {"id": "randoseru", "x": 245, "x2": 282, "height": 35, "type": "ground"},
             {"id": "door_to_room", "x": 600, "x2": 675, "height": 200, "type": "overhead"}
         ]
     },
@@ -311,8 +309,7 @@ const STAGES = {
             {"id": "ticket_gate", "x": 350, "x2": 700, "height": 100, "type": "ground"},
             {"id": "station_bench", "x": 900, "x2": 1100, "height": 42, "type": "ground"},
             {"id": "timetable", "x": 1150, "x2": 1250, "height": 200, "type": "background"},
-            {"id": "station_vending", "x": 1380, "x2": 1460, "height": 183, "type": "ground"},
-            {"id": "station_name_sign", "x": 1600, "x2": 1800, "height": 200, "type": "background"}
+            {"id": "station_vending", "x": 1380, "x2": 1460, "height": 183, "type": "ground"}
         ]
     }
 }
@@ -558,9 +555,9 @@ static func build_stage(stage_id: String, parent_node: Node2D, cm_to_px: float, 
         sky_btm.size = Vector2(stage_w_px, 200 * cm_to_px)
         out_bg.add_child(sky_btm)
         # ===== 家の外観（左端、door_to_roomの右隣） =====
-        var house_x = 130 * cm_to_px
-        var house_w = 290 * cm_to_px
-        var house_h = 240 * cm_to_px
+        var house_x = 120 * cm_to_px
+        var house_w = 360 * cm_to_px
+        var house_h = 350 * cm_to_px
         var h_wall = ColorRect.new()
         h_wall.color = Color(0.92, 0.88, 0.80)
         h_wall.position = Vector2(house_x, -house_h)
@@ -571,16 +568,16 @@ static func build_stage(stage_id: String, parent_node: Node2D, cm_to_px: float, 
         roof.polygon = PackedVector2Array([
             Vector2(house_x - 15, -house_h),
             Vector2(house_x + house_w + 15, -house_h),
-            Vector2(house_x + house_w * 0.5, - (house_h + 110 * cm_to_px)),
+            Vector2(house_x + house_w * 0.5, - (house_h + 130 * cm_to_px)),
         ])
         roof.color = Color(0.50, 0.20, 0.10)
         out_bg.add_child(roof)
         # 家の窓2つ
-        for hwin_x_off in [20.0, house_w - 80.0]:
+        for hwin_x_off in [32.0, house_w - 94.0]:
             var hw = ColorRect.new()
             hw.color = Color(0.68, 0.83, 1.0, 0.85)
-            hw.position = Vector2(house_x + hwin_x_off * cm_to_px, - (house_h - 45 * cm_to_px))
-            hw.size = Vector2(55 * cm_to_px, 65 * cm_to_px)
+            hw.position = Vector2(house_x + hwin_x_off * cm_to_px, - (house_h - 70 * cm_to_px))
+            hw.size = Vector2(62 * cm_to_px, 80 * cm_to_px)
             out_bg.add_child(hw)
             var hwf = ReferenceRect.new()
             hwf.editor_only = false
@@ -596,9 +593,9 @@ static func build_stage(stage_id: String, parent_node: Node2D, cm_to_px: float, 
         hbase.size = Vector2(house_w, 15 * cm_to_px)
         out_bg.add_child(hbase)
         # ===== 駅ビル（door_to_station の背後） =====
-        var st_x = 620 * cm_to_px
-        var st_w = 180 * cm_to_px
-        var st_h = 320 * cm_to_px
+        var st_x = 655 * cm_to_px
+        var st_w = 195 * cm_to_px
+        var st_h = 330 * cm_to_px
         var st_wall = ColorRect.new()
         st_wall.color = Color(0.72, 0.74, 0.78)
         st_wall.position = Vector2(st_x, -st_h)
@@ -618,9 +615,9 @@ static func build_stage(stage_id: String, parent_node: Node2D, cm_to_px: float, 
             stw.size = Vector2(60 * cm_to_px, 80 * cm_to_px)
             out_bg.add_child(stw)
         # ===== 学校（door_to_school の背後） =====
-        var sc_x = 980 * cm_to_px
-        var sc_w = 560 * cm_to_px
-        var sc_h = 380 * cm_to_px
+        var sc_x = 1020 * cm_to_px
+        var sc_w = 470 * cm_to_px
+        var sc_h = 420 * cm_to_px
         var sc_wall = ColorRect.new()
         sc_wall.color = Color(0.82, 0.80, 0.72)
         sc_wall.position = Vector2(sc_x, -sc_h)
@@ -631,19 +628,9 @@ static func build_stage(stage_id: String, parent_node: Node2D, cm_to_px: float, 
             for col in range(4):
                 var scw = ColorRect.new()
                 scw.color = Color(0.58, 0.74, 0.90, 0.78)
-                scw.position = Vector2(sc_x + (24 + col * 112) * cm_to_px, - (sc_h - (30 + row * 110) * cm_to_px))
-                scw.size = Vector2(60 * cm_to_px, 80 * cm_to_px)
+                scw.position = Vector2(sc_x + (28 + col * 105) * cm_to_px, - (sc_h - (36 + row * 118) * cm_to_px))
+                scw.size = Vector2(58 * cm_to_px, 82 * cm_to_px)
                 out_bg.add_child(scw)
-        var sc_gate = ColorRect.new()
-        sc_gate.color = Color(0.34, 0.40, 0.50)
-        sc_gate.position = Vector2(1200 * cm_to_px, -220 * cm_to_px)
-        sc_gate.size = Vector2(120 * cm_to_px, 220 * cm_to_px)
-        out_bg.add_child(sc_gate)
-        var sc_fence = ColorRect.new()
-        sc_fence.color = Color(0.70, 0.72, 0.76)
-        sc_fence.position = Vector2(1320 * cm_to_px, -120 * cm_to_px)
-        sc_fence.size = Vector2(180 * cm_to_px, 12 * cm_to_px)
-        out_bg.add_child(sc_fence)
         parent_node.add_child(out_bg)
 
     elif stage_id == "adjacent_town":
@@ -662,8 +649,8 @@ static func build_stage(stage_id: String, parent_node: Node2D, cm_to_px: float, 
         town_sky_btm.size = Vector2(town_w_px, 200 * cm_to_px)
         town_bg.add_child(town_sky_btm)
         for house_data in [
-            {"x": 180.0, "w": 220.0, "h": 240.0, "color": Color(0.88, 0.83, 0.76), "roof": Color(0.52, 0.30, 0.24)},
-            {"x": 470.0, "w": 180.0, "h": 210.0, "color": Color(0.80, 0.82, 0.88), "roof": Color(0.35, 0.30, 0.28)},
+            {"x": 120.0, "w": 280.0, "h": 310.0, "color": Color(0.88, 0.83, 0.76), "roof": Color(0.52, 0.30, 0.24)},
+            {"x": 460.0, "w": 240.0, "h": 290.0, "color": Color(0.80, 0.82, 0.88), "roof": Color(0.35, 0.30, 0.28)},
         ]:
             var hx = float(house_data["x"]) * cm_to_px
             var hw = float(house_data["w"]) * cm_to_px
@@ -674,12 +661,12 @@ static func build_stage(stage_id: String, parent_node: Node2D, cm_to_px: float, 
             house.size = Vector2(hw, hh)
             town_bg.add_child(house)
             # 三角屋根
-            var overhang = 8.0 * cm_to_px
+            var overhang = 10.0 * cm_to_px
             var roof = Polygon2D.new()
             roof.polygon = PackedVector2Array([
                 Vector2(hx - overhang, -hh),
                 Vector2(hx + hw + overhang, -hh),
-                Vector2(hx + hw * 0.5, -hh - 50.0 * cm_to_px),
+                Vector2(hx + hw * 0.5, -hh - 60.0 * cm_to_px),
             ])
             roof.color = house_data["roof"]
             town_bg.add_child(roof)
@@ -687,27 +674,22 @@ static func build_stage(stage_id: String, parent_node: Node2D, cm_to_px: float, 
             for wx_off in [0.15, 0.60]:
                 var win = ColorRect.new()
                 win.color = Color(0.62, 0.78, 0.90, 0.6)
-                win.position = Vector2(hx + hw * wx_off, -hh * 0.6)
-                win.size = Vector2(hw * 0.18, hh * 0.2)
+                win.position = Vector2(hx + hw * wx_off, -hh * 0.62)
+                win.size = Vector2(hw * 0.18, hh * 0.22)
                 town_bg.add_child(win)
         var school_wall = ColorRect.new()
         school_wall.color = Color(0.78, 0.80, 0.84)
-        school_wall.position = Vector2(1070 * cm_to_px, -320 * cm_to_px)
-        school_wall.size = Vector2(260 * cm_to_px, 320 * cm_to_px)
+        school_wall.position = Vector2(970 * cm_to_px, -360 * cm_to_px)
+        school_wall.size = Vector2(420 * cm_to_px, 360 * cm_to_px)
         town_bg.add_child(school_wall)
         # 学校建物の窓（2列 × 2行）
         for sw_row in range(2):
-            for sw_col in range(2):
+            for sw_col in range(3):
                 var swin = ColorRect.new()
                 swin.color = Color(0.62, 0.78, 0.90, 0.55)
-                swin.position = Vector2((1095 + sw_col * 100) * cm_to_px, -(265 - sw_row * 90) * cm_to_px)
-                swin.size = Vector2(50 * cm_to_px, 60 * cm_to_px)
+                swin.position = Vector2((1005 + sw_col * 118) * cm_to_px, -(310 - sw_row * 110) * cm_to_px)
+                swin.size = Vector2(70 * cm_to_px, 70 * cm_to_px)
                 town_bg.add_child(swin)
-        var school_gate = ColorRect.new()
-        school_gate.color = Color(0.32, 0.38, 0.48)
-        school_gate.position = Vector2(1160 * cm_to_px, -220 * cm_to_px)
-        school_gate.size = Vector2(120 * cm_to_px, 220 * cm_to_px)
-        town_bg.add_child(school_gate)
         parent_node.add_child(town_bg)
 
     elif stage_id == "platform":
@@ -816,11 +798,6 @@ static func build_stage(stage_id: String, parent_node: Node2D, cm_to_px: float, 
         gm_sky_btm.position = Vector2(0, -200 * cm_to_px)
         gm_sky_btm.size = Vector2(gakuenmae_w_px, 200 * cm_to_px)
         gakuenmae_bg.add_child(gm_sky_btm)
-        var sign_base = ColorRect.new()
-        sign_base.color = Color(0.12, 0.45, 0.28)
-        sign_base.position = Vector2(520 * cm_to_px, -190 * cm_to_px)
-        sign_base.size = Vector2(260 * cm_to_px, 44 * cm_to_px)
-        gakuenmae_bg.add_child(sign_base)
         var fence = ColorRect.new()
         fence.color = Color(0.75, 0.78, 0.82)
         fence.position = Vector2(1080 * cm_to_px, -120 * cm_to_px)
@@ -926,8 +903,8 @@ static func build_stage(stage_id: String, parent_node: Node2D, cm_to_px: float, 
                 town_arcade.add_child(shop_win)
         var high_gate_bg = ColorRect.new()
         high_gate_bg.color = Color(0.32, 0.36, 0.46)
-        high_gate_bg.position = Vector2(1810 * cm_to_px, -260 * cm_to_px)
-        high_gate_bg.size = Vector2(140 * cm_to_px, 260 * cm_to_px)
+        high_gate_bg.position = Vector2(1710 * cm_to_px, -320 * cm_to_px)
+        high_gate_bg.size = Vector2(450 * cm_to_px, 320 * cm_to_px)
         town_arcade.add_child(high_gate_bg)
         parent_node.add_child(town_arcade)
 
@@ -1992,6 +1969,37 @@ static func _build_obstacle(obs: Dictionary, parent: Node2D, cm_to_px: float, st
         adoor_center.z_index = -1
         node.add_child(adoor_center)
 
+    elif o_id == "door_to_school_hallway_elementary":
+        cr.color = Color(0, 0, 0, 0)
+        var elem_x = obs["x"] * cm_to_px
+        var elem_post_w = w_px * 0.16
+        var elem_header_h = h_px * 0.16
+        for elem_post_x in [elem_x, elem_x + w_px - elem_post_w]:
+            var elem_post = ColorRect.new()
+            elem_post.color = Color(0.73, 0.71, 0.64)
+            elem_post.position = Vector2(elem_post_x, -h_px)
+            elem_post.size = Vector2(elem_post_w, h_px)
+            elem_post.z_index = -1
+            node.add_child(elem_post)
+        var elem_header = ColorRect.new()
+        elem_header.color = Color(0.64, 0.62, 0.56)
+        elem_header.position = Vector2(elem_x, -h_px)
+        elem_header.size = Vector2(w_px, elem_header_h)
+        elem_header.z_index = -1
+        node.add_child(elem_header)
+        var elem_opening = ColorRect.new()
+        elem_opening.color = Color(0.56, 0.72, 0.88, 0.18)
+        elem_opening.position = Vector2(elem_x + elem_post_w, -h_px + elem_header_h)
+        elem_opening.size = Vector2(w_px - elem_post_w * 2.0, h_px - elem_header_h)
+        elem_opening.z_index = -1
+        node.add_child(elem_opening)
+        var elem_nameplate = ColorRect.new()
+        elem_nameplate.color = Color(0.28, 0.42, 0.70)
+        elem_nameplate.position = Vector2(elem_x + w_px * 0.18, -h_px + elem_header_h * 0.2)
+        elem_nameplate.size = Vector2(w_px * 0.64, elem_header_h * 0.45)
+        elem_nameplate.z_index = -1
+        node.add_child(elem_nameplate)
+
     elif o_id.begins_with("door_to_school_hallway") and stage_id == "adjacent_town":
         # 隣町側から見た中学校ドア（コンクリート校門形）
         cr.color = Color(0, 0, 0, 0)
@@ -2020,6 +2028,47 @@ static func _build_obstacle(obs: Dictionary, parent: Node2D, cm_to_px: float, st
         adj_opening.size = Vector2(w_px * 0.64, h_px * 0.88)
         adj_opening.z_index = -1
         node.add_child(adj_opening)
+
+    elif o_id == "door_to_school_hallway_high":
+        cr.color = Color(0, 0, 0, 0)
+        var high_gate_x = obs["x"] * cm_to_px
+        var high_post_w = w_px * 0.14
+        var high_header_h = h_px * 0.14
+        for high_post_x in [high_gate_x, high_gate_x + w_px - high_post_w]:
+            var high_post = ColorRect.new()
+            high_post.color = Color(0.26, 0.28, 0.36)
+            high_post.position = Vector2(high_post_x, -h_px)
+            high_post.size = Vector2(high_post_w, h_px)
+            high_post.z_index = -1
+            node.add_child(high_post)
+        var high_header = ColorRect.new()
+        high_header.color = Color(0.20, 0.22, 0.30)
+        high_header.position = Vector2(high_gate_x, -h_px)
+        high_header.size = Vector2(w_px, high_header_h)
+        high_header.z_index = -1
+        node.add_child(high_header)
+        var high_opening = ColorRect.new()
+        high_opening.color = Color(0.58, 0.72, 0.88, 0.18)
+        high_opening.position = Vector2(high_gate_x + high_post_w, -h_px + high_header_h)
+        high_opening.size = Vector2(w_px - high_post_w * 2.0, h_px - high_header_h)
+        high_opening.z_index = -1
+        node.add_child(high_opening)
+        for gate_side in [0.0, 1.0]:
+            var gate_panel = ColorRect.new()
+            gate_panel.color = Color(0.34, 0.38, 0.48)
+            gate_panel.position = Vector2(
+                high_gate_x + high_post_w + (w_px - high_post_w * 2.0) * 0.05 + gate_side * (w_px - high_post_w * 2.0) * 0.48,
+                -h_px * 0.52
+            )
+            gate_panel.size = Vector2((w_px - high_post_w * 2.0) * 0.42, h_px * 0.38)
+            gate_panel.z_index = -1
+            node.add_child(gate_panel)
+        var high_nameplate = ColorRect.new()
+        high_nameplate.color = Color(0.70, 0.76, 0.86)
+        high_nameplate.position = Vector2(high_gate_x + w_px * 0.24, -h_px + high_header_h * 0.22)
+        high_nameplate.size = Vector2(w_px * 0.52, high_header_h * 0.40)
+        high_nameplate.z_index = -1
+        node.add_child(high_nameplate)
 
     elif o_id.begins_with("door_to_school_hallway"):
         # 学校のガラス引き戸ドア（学校内部スタイル）
@@ -3160,136 +3209,199 @@ static func _build_obstacle(obs: Dictionary, parent: Node2D, cm_to_px: float, st
         node.add_child(ts_green)
 
     elif o_id == "car":
-        # 軽自動車（横から見た）
         cr.color = Color(0, 0, 0, 0)
         var car_x = obs["x"] * cm_to_px
-        # 車体下部（ボディ）
         var car_body = ColorRect.new()
-        car_body.color = Color(0.30, 0.45, 0.72) # 青系
-        car_body.position = Vector2(car_x, -h_px)
-        car_body.size = Vector2(w_px, h_px * 0.65)
+        car_body.color = Color(0.36, 0.50, 0.78)
+        car_body.position = Vector2(car_x, -h_px * 0.62)
+        car_body.size = Vector2(w_px, h_px * 0.50)
         car_body.z_index = -1
         node.add_child(car_body)
-        # 屋根（キャビン）
-        var car_roof = Polygon2D.new()
-        var rx = car_x + w_px * 0.22
-        var ry = -(h_px)
-        car_roof.polygon = PackedVector2Array([
-            Vector2(rx, ry),
-            Vector2(rx + w_px * 0.56, ry),
-            Vector2(rx + w_px * 0.68, ry + h_px * 0.40),
-            Vector2(rx - w_px * 0.12, ry + h_px * 0.40),
+        var car_cabin = Polygon2D.new()
+        car_cabin.color = Color(0.28, 0.40, 0.64)
+        car_cabin.z_index = -1
+        car_cabin.polygon = PackedVector2Array([
+            Vector2(car_x + w_px * 0.18, -h_px * 0.62),
+            Vector2(car_x + w_px * 0.34, -h_px),
+            Vector2(car_x + w_px * 0.72, -h_px),
+            Vector2(car_x + w_px * 0.88, -h_px * 0.62),
         ])
-        car_roof.color = Color(0.22, 0.34, 0.58)
-        car_roof.z_index = -1
-        node.add_child(car_roof)
-        # フロントガラス
-        var car_fg = Polygon2D.new()
-        car_fg.polygon = PackedVector2Array([
-            Vector2(car_x + w_px * 0.22, -(h_px)),
-            Vector2(car_x + w_px * 0.45, -(h_px)),
-            Vector2(car_x + w_px * 0.47, -(h_px) + h_px * 0.40),
-            Vector2(car_x + w_px * 0.10, -(h_px) + h_px * 0.40),
-        ])
-        car_fg.color = Color(0.62, 0.80, 0.95, 0.70)
-        car_fg.z_index = -1
-        node.add_child(car_fg)
-        # リアガラス
-        var car_rg = Polygon2D.new()
-        car_rg.polygon = PackedVector2Array([
-            Vector2(car_x + w_px * 0.55, -(h_px)),
-            Vector2(car_x + w_px * 0.78, -(h_px)),
-            Vector2(car_x + w_px * 0.80, -(h_px) + h_px * 0.40),
-            Vector2(car_x + w_px * 0.53, -(h_px) + h_px * 0.40),
-        ])
-        car_rg.color = Color(0.62, 0.80, 0.95, 0.70)
-        car_rg.z_index = -1
-        node.add_child(car_rg)
-        # タイヤ（前・後）
-        for wheel_x_off in [0.18, 0.72]:
+        node.add_child(car_cabin)
+        for glass_rect in [
+            Rect2(car_x + w_px * 0.26, -h_px * 0.90, w_px * 0.18, h_px * 0.22),
+            Rect2(car_x + w_px * 0.48, -h_px * 0.90, w_px * 0.20, h_px * 0.22),
+        ]:
+            var car_window = ColorRect.new()
+            car_window.color = Color(0.70, 0.84, 0.96, 0.72)
+            car_window.position = glass_rect.position
+            car_window.size = glass_rect.size
+            car_window.z_index = -1
+            node.add_child(car_window)
+        var bumper = ColorRect.new()
+        bumper.color = Color(0.20, 0.22, 0.26)
+        bumper.position = Vector2(car_x + w_px * 0.06, -h_px * 0.12)
+        bumper.size = Vector2(w_px * 0.88, 8)
+        bumper.z_index = -1
+        node.add_child(bumper)
+        for light_data in [
+            {"x": car_x + w_px * 0.06, "color": Color(1.0, 0.92, 0.62)},
+            {"x": car_x + w_px * 0.88, "color": Color(0.88, 0.24, 0.22)},
+        ]:
+            var car_light = ColorRect.new()
+            car_light.color = light_data["color"]
+            car_light.position = Vector2(light_data["x"], -h_px * 0.36)
+            car_light.size = Vector2(10, 14)
+            car_light.z_index = -1
+            node.add_child(car_light)
+        for wheel_x_off in [0.22, 0.74]:
             var wheel_panel = Panel.new()
             var wheel_style = StyleBoxFlat.new()
-            wheel_style.bg_color = Color(0.15, 0.15, 0.17)
-            var wheel_r = int(h_px * 0.22)
+            wheel_style.bg_color = Color(0.12, 0.12, 0.14)
+            var wheel_d = h_px * 0.42
+            var wheel_r = int(wheel_d * 0.5)
             wheel_style.corner_radius_top_left = wheel_r
             wheel_style.corner_radius_top_right = wheel_r
             wheel_style.corner_radius_bottom_left = wheel_r
             wheel_style.corner_radius_bottom_right = wheel_r
             wheel_panel.add_theme_stylebox_override("panel", wheel_style)
-            var wd = h_px * 0.44
-            wheel_panel.position = Vector2(car_x + w_px * wheel_x_off - wd * 0.5, -wd)
-            wheel_panel.size = Vector2(wd, wd)
+            wheel_panel.position = Vector2(car_x + w_px * wheel_x_off - wheel_d * 0.5, -wheel_d + 4)
+            wheel_panel.size = Vector2(wheel_d, wheel_d)
             wheel_panel.z_index = -1
             node.add_child(wheel_panel)
+            var hub = Panel.new()
+            var hub_style = StyleBoxFlat.new()
+            hub_style.bg_color = Color(0.70, 0.72, 0.76)
+            var hub_d = wheel_d * 0.42
+            var hub_r = int(hub_d * 0.5)
+            hub_style.corner_radius_top_left = hub_r
+            hub_style.corner_radius_top_right = hub_r
+            hub_style.corner_radius_bottom_left = hub_r
+            hub_style.corner_radius_bottom_right = hub_r
+            hub.add_theme_stylebox_override("panel", hub_style)
+            hub.position = wheel_panel.position + Vector2((wheel_d - hub_d) * 0.5, (wheel_d - hub_d) * 0.5)
+            hub.size = Vector2(hub_d, hub_d)
+            hub.z_index = -1
+            node.add_child(hub)
 
     elif o_id == "bus":
-        # 路線バス
         cr.color = Color(0, 0, 0, 0)
         var bus_x = obs["x"] * cm_to_px
-        var bus_body_color = Color(0.18, 0.55, 0.28)  # 路線バス緑
-        var bus_white = Color(0.92, 0.92, 0.92)
-        # 車体
-        var body = ColorRect.new()
-        body.color = bus_body_color
-        body.position = Vector2(bus_x, -h_px)
-        body.size = Vector2(w_px, h_px)
-        body.z_index = -1
-        node.add_child(body)
-        # 車体上部の白帯
-        var white_band = ColorRect.new()
-        white_band.color = bus_white
-        white_band.position = Vector2(bus_x, -h_px)
-        white_band.size = Vector2(w_px, h_px * 0.12)
-        white_band.z_index = -1
-        node.add_child(white_band)
-        # 行き先表示（前面）
-        var dest_sign = ColorRect.new()
-        dest_sign.color = Color(0.08, 0.08, 0.12)
-        dest_sign.position = Vector2(bus_x + w_px * 0.60, -h_px + h_px * 0.04)
-        dest_sign.size = Vector2(w_px * 0.35, h_px * 0.10)
-        dest_sign.z_index = -1
-        node.add_child(dest_sign)
-        # 窓（側面）
-        var win_count = 4
-        var win_w = w_px * 0.13
-        var win_h = h_px * 0.22
-        for wi in range(win_count):
-            var bwin = ColorRect.new()
-            bwin.color = Color(0.62, 0.78, 0.90, 0.72)
-            bwin.position = Vector2(bus_x + w_px * 0.05 + wi * (w_px * 0.18), -h_px + h_px * 0.16)
-            bwin.size = Vector2(win_w, win_h)
-            bwin.z_index = -1
-            node.add_child(bwin)
-        # ドア（乗降口）
-        var door_w2 = w_px * 0.16
+        var bus_body_h = h_px * 0.78
+        var bus_body = ColorRect.new()
+        bus_body.color = Color(0.18, 0.54, 0.30)
+        bus_body.position = Vector2(bus_x, -h_px)
+        bus_body.size = Vector2(w_px, bus_body_h)
+        bus_body.z_index = -1
+        node.add_child(bus_body)
+        var bus_roof = ColorRect.new()
+        bus_roof.color = Color(0.92, 0.92, 0.94)
+        bus_roof.position = Vector2(bus_x, -h_px)
+        bus_roof.size = Vector2(w_px, h_px * 0.10)
+        bus_roof.z_index = -1
+        node.add_child(bus_roof)
+        var bus_mid_band = ColorRect.new()
+        bus_mid_band.color = Color(0.94, 0.96, 0.95)
+        bus_mid_band.position = Vector2(bus_x, -h_px + h_px * 0.44)
+        bus_mid_band.size = Vector2(w_px, 10)
+        bus_mid_band.z_index = -1
+        node.add_child(bus_mid_band)
+        var bus_dest = ColorRect.new()
+        bus_dest.color = Color(0.08, 0.08, 0.10)
+        bus_dest.position = Vector2(bus_x + w_px * 0.64, -h_px + h_px * 0.06)
+        bus_dest.size = Vector2(w_px * 0.26, h_px * 0.08)
+        bus_dest.z_index = -1
+        node.add_child(bus_dest)
+        for wi in range(4):
+            var bus_window = ColorRect.new()
+            bus_window.color = Color(0.68, 0.84, 0.96, 0.72)
+            bus_window.position = Vector2(bus_x + w_px * 0.07 + wi * (w_px * 0.17), -h_px + h_px * 0.18)
+            bus_window.size = Vector2(w_px * 0.12, h_px * 0.22)
+            bus_window.z_index = -1
+            node.add_child(bus_window)
+        var front_window = ColorRect.new()
+        front_window.color = Color(0.68, 0.84, 0.96, 0.72)
+        front_window.position = Vector2(bus_x + w_px * 0.86, -h_px + h_px * 0.18)
+        front_window.size = Vector2(w_px * 0.08, h_px * 0.22)
+        front_window.z_index = -1
+        node.add_child(front_window)
+        var door_w2 = w_px * 0.15
         var bus_door = ColorRect.new()
-        bus_door.color = Color(0.50, 0.72, 0.55)
-        bus_door.position = Vector2(bus_x + w_px * 0.78, -h_px * 0.70)
-        bus_door.size = Vector2(door_w2, h_px * 0.65)
+        bus_door.color = Color(0.78, 0.90, 0.86)
+        bus_door.position = Vector2(bus_x + w_px * 0.74, -h_px + h_px * 0.24)
+        bus_door.size = Vector2(door_w2, h_px * 0.50)
         bus_door.z_index = -1
         node.add_child(bus_door)
-        # ドアの縦線（2枚折り戸）
         var door_div = ColorRect.new()
-        door_div.color = Color(0.30, 0.55, 0.38)
-        door_div.position = Vector2(bus_x + w_px * 0.86, -h_px * 0.70)
-        door_div.size = Vector2(3, h_px * 0.65)
+        door_div.color = Color(0.26, 0.44, 0.30)
+        door_div.position = Vector2(bus_door.position.x + door_w2 * 0.5 - 2, bus_door.position.y)
+        door_div.size = Vector2(4, bus_door.size.y)
         door_div.z_index = -1
         node.add_child(door_div)
-        # タイヤ（2つ）
-        for tyre_x_off in [w_px * 0.12, w_px * 0.72]:
-            var tyre = ColorRect.new()
-            tyre.color = Color(0.15, 0.15, 0.18)
-            tyre.position = Vector2(bus_x + tyre_x_off - 15, -22)
-            tyre.size = Vector2(30, 22)
-            tyre.z_index = -1
-            node.add_child(tyre)
-        # 車体下部の黒帯
-        var lower_band = ColorRect.new()
-        lower_band.color = Color(0.20, 0.20, 0.22)
-        lower_band.position = Vector2(bus_x, -22)
-        lower_band.size = Vector2(w_px, 22)
-        lower_band.z_index = -1
-        node.add_child(lower_band)
+        var bus_skirt = ColorRect.new()
+        bus_skirt.color = Color(0.18, 0.20, 0.22)
+        bus_skirt.position = Vector2(bus_x, -36)
+        bus_skirt.size = Vector2(w_px, 18)
+        bus_skirt.z_index = -1
+        node.add_child(bus_skirt)
+        for tyre_x_off in [0.20, 0.76]:
+            var tyre_panel = Panel.new()
+            var tyre_style = StyleBoxFlat.new()
+            tyre_style.bg_color = Color(0.10, 0.10, 0.12)
+            var tyre_d = h_px * 0.23
+            var tyre_r = int(tyre_d * 0.5)
+            tyre_style.corner_radius_top_left = tyre_r
+            tyre_style.corner_radius_top_right = tyre_r
+            tyre_style.corner_radius_bottom_left = tyre_r
+            tyre_style.corner_radius_bottom_right = tyre_r
+            tyre_panel.add_theme_stylebox_override("panel", tyre_style)
+            tyre_panel.position = Vector2(bus_x + w_px * tyre_x_off - tyre_d * 0.5, -tyre_d + 2)
+            tyre_panel.size = Vector2(tyre_d, tyre_d)
+            tyre_panel.z_index = -1
+            node.add_child(tyre_panel)
+            var tyre_hub = Panel.new()
+            var tyre_hub_style = StyleBoxFlat.new()
+            tyre_hub_style.bg_color = Color(0.74, 0.76, 0.78)
+            var tyre_hub_d = tyre_d * 0.42
+            var tyre_hub_r = int(tyre_hub_d * 0.5)
+            tyre_hub_style.corner_radius_top_left = tyre_hub_r
+            tyre_hub_style.corner_radius_top_right = tyre_hub_r
+            tyre_hub_style.corner_radius_bottom_left = tyre_hub_r
+            tyre_hub_style.corner_radius_bottom_right = tyre_hub_r
+            tyre_hub.add_theme_stylebox_override("panel", tyre_hub_style)
+            tyre_hub.position = tyre_panel.position + Vector2((tyre_d - tyre_hub_d) * 0.5, (tyre_d - tyre_hub_d) * 0.5)
+            tyre_hub.size = Vector2(tyre_hub_d, tyre_hub_d)
+            tyre_hub.z_index = -1
+            node.add_child(tyre_hub)
+
+    elif o_id == "shop_awning":
+        cr.color = Color(0, 0, 0, 0)
+        var awning_x = obs["x"] * cm_to_px
+        var awning_top = ColorRect.new()
+        awning_top.color = Color(0.24, 0.46, 0.76)
+        awning_top.position = Vector2(awning_x, -h_px)
+        awning_top.size = Vector2(w_px, 18)
+        awning_top.z_index = -1
+        node.add_child(awning_top)
+        var awning_front = ColorRect.new()
+        awning_front.color = Color(0.18, 0.36, 0.64)
+        awning_front.position = Vector2(awning_x, -h_px + 18)
+        awning_front.size = Vector2(w_px, 22)
+        awning_front.z_index = -1
+        node.add_child(awning_front)
+        for stripe_idx in range(6):
+            var stripe = ColorRect.new()
+            stripe.color = Color(0.96, 0.92, 0.74, 0.92) if stripe_idx % 2 == 0 else Color(0.30, 0.56, 0.88, 0.96)
+            stripe.position = Vector2(awning_x + stripe_idx * (w_px / 6.0), -h_px + 18)
+            stripe.size = Vector2(w_px / 6.0, 22)
+            stripe.z_index = -1
+            node.add_child(stripe)
+        for rod_off in [w_px * 0.14, w_px * 0.50, w_px * 0.86]:
+            var rod = ColorRect.new()
+            rod.color = Color(0.60, 0.62, 0.68)
+            rod.position = Vector2(awning_x + rod_off, -h_px + 18)
+            rod.size = Vector2(4, 28)
+            rod.z_index = -1
+            node.add_child(rod)
 
     elif o_id == "bus_stop_sign":
         # バス停標識
@@ -3707,57 +3819,60 @@ static func _build_obstacle(obs: Dictionary, parent: Node2D, cm_to_px: float, st
         top_band.z_index = -1
         node.add_child(top_band)
 
-    elif o_id == "station_name_sign":
-        # 駅名標（吊り下げ型）
+    elif o_id == "station_name_sign" or o_id == "station_sign_gakuenmae":
         cr.color = Color(0, 0, 0, 0)
-        var sn_x = obs["x"] * cm_to_px
-        # 支柱（2本）
-        for post_off in [w_px * 0.15, w_px * 0.75]:
-            var sn_post = ColorRect.new()
-            sn_post.color = Color(0.55, 0.55, 0.58)
-            sn_post.position = Vector2(sn_x + post_off - 4, -h_px)
-            sn_post.size = Vector2(8, h_px)
-            sn_post.z_index = -1
-            node.add_child(sn_post)
-        # 看板本体（緑）
-        var sign_h = h_px * 0.28
-        var sign_y = -h_px + h_px * 0.10
-        var sn_bg = ColorRect.new()
-        sn_bg.color = Color(0.10, 0.42, 0.22)
-        sn_bg.position = Vector2(sn_x, sign_y)
-        sn_bg.size = Vector2(w_px, sign_h)
-        sn_bg.z_index = -1
-        node.add_child(sn_bg)
-        var sn_frame = ReferenceRect.new()
-        sn_frame.editor_only = false
-        sn_frame.border_color = Color(0.08, 0.30, 0.15)
-        sn_frame.border_width = 3.0
-        sn_frame.position = sn_bg.position
-        sn_frame.size = sn_bg.size
-        sn_frame.z_index = -1
-        node.add_child(sn_frame)
-        # テキスト代わりの白い横線（「〇〇駅」の雰囲気）
-        var txt_line1 = ColorRect.new()
-        txt_line1.color = Color(0.95, 0.95, 0.95)
-        txt_line1.position = Vector2(sn_x + w_px * 0.12, sign_y + sign_h * 0.25)
-        txt_line1.size = Vector2(w_px * 0.76, sign_h * 0.22)
-        txt_line1.z_index = -1
-        node.add_child(txt_line1)
-        # ふりがなの小さい白線
-        var txt_ruby = ColorRect.new()
-        txt_ruby.color = Color(0.80, 0.80, 0.80, 0.80)
-        txt_ruby.position = Vector2(sn_x + w_px * 0.12, sign_y + sign_h * 0.12)
-        txt_ruby.size = Vector2(w_px * 0.76, sign_h * 0.10)
-        txt_ruby.z_index = -1
-        node.add_child(txt_ruby)
-        # 隣駅表示（両サイドの小さい看板）
-        for side_off in [0.0, w_px - w_px * 0.20]:
-            var adj_sign = ColorRect.new()
-            adj_sign.color = Color(0.12, 0.45, 0.25)
-            adj_sign.position = Vector2(sn_x + side_off, sign_y + sign_h * 0.05)
-            adj_sign.size = Vector2(w_px * 0.18, sign_h * 0.90)
-            adj_sign.z_index = -1
-            node.add_child(adj_sign)
+        var sign_x = obs["x"] * cm_to_px
+        var sign_post_color = Color(0.56, 0.58, 0.62)
+        var sign_panel_color = Color(0.14, 0.48, 0.28) if o_id == "station_name_sign" else Color(0.16, 0.42, 0.66)
+        var sign_frame_color = Color(0.10, 0.24, 0.14) if o_id == "station_name_sign" else Color(0.10, 0.22, 0.40)
+        var sign_board_y = -h_px * 0.72
+        for post_off in [w_px * 0.14, w_px * 0.86]:
+            var sign_post = ColorRect.new()
+            sign_post.color = sign_post_color
+            sign_post.position = Vector2(sign_x + post_off - 5, -h_px)
+            sign_post.size = Vector2(10, h_px)
+            sign_post.z_index = -1
+            node.add_child(sign_post)
+        var sign_arch = Polygon2D.new()
+        sign_arch.color = sign_panel_color
+        sign_arch.z_index = -1
+        sign_arch.polygon = PackedVector2Array([
+            Vector2(sign_x + w_px * 0.08, sign_board_y + h_px * 0.14),
+            Vector2(sign_x + w_px * 0.18, sign_board_y),
+            Vector2(sign_x + w_px * 0.82, sign_board_y),
+            Vector2(sign_x + w_px * 0.92, sign_board_y + h_px * 0.14),
+            Vector2(sign_x + w_px * 0.92, sign_board_y + h_px * 0.32),
+            Vector2(sign_x + w_px * 0.08, sign_board_y + h_px * 0.32),
+        ])
+        node.add_child(sign_arch)
+        var sign_frame = ReferenceRect.new()
+        sign_frame.editor_only = false
+        sign_frame.border_color = sign_frame_color
+        sign_frame.border_width = 3.0
+        sign_frame.position = Vector2(sign_x + w_px * 0.08, sign_board_y + h_px * 0.14)
+        sign_frame.size = Vector2(w_px * 0.84, h_px * 0.18)
+        sign_frame.z_index = -1
+        node.add_child(sign_frame)
+        var sign_ruby = ColorRect.new()
+        sign_ruby.color = Color(0.82, 0.82, 0.84, 0.85)
+        sign_ruby.position = Vector2(sign_x + w_px * 0.24, sign_board_y + h_px * 0.17)
+        sign_ruby.size = Vector2(w_px * 0.52, h_px * 0.03)
+        sign_ruby.z_index = -1
+        node.add_child(sign_ruby)
+        var sign_text = ColorRect.new()
+        sign_text.color = Color(0.98, 0.98, 0.98)
+        sign_text.position = Vector2(sign_x + w_px * 0.20, sign_board_y + h_px * 0.22)
+        sign_text.size = Vector2(w_px * 0.60, h_px * 0.06)
+        sign_text.z_index = -1
+        node.add_child(sign_text)
+        if o_id == "station_name_sign":
+            for arrow_dir in [0.0, 1.0]:
+                var side_panel = ColorRect.new()
+                side_panel.color = Color(0.18, 0.58, 0.34)
+                side_panel.position = Vector2(sign_x + w_px * (0.09 + arrow_dir * 0.73), sign_board_y + h_px * 0.18)
+                side_panel.size = Vector2(w_px * 0.10, h_px * 0.10)
+                side_panel.z_index = -1
+                node.add_child(side_panel)
 
     elif o_id == "station_bench":
         # 駅のホームベンチ
@@ -3784,6 +3899,28 @@ static func _build_obstacle(obs: Dictionary, parent: Node2D, cm_to_px: float, st
             sb_leg.position = cr.position + Vector2(li * (w_px / (leg_count - 1)) - 4 if li < leg_count - 1 else w_px - 8, 8)
             sb_leg.size = Vector2(8, h_draw_px - 8)
             node.add_child(sb_leg)
+
+    elif "bench" in o_id:
+        cr.color = Color(0, 0, 0, 0)
+        var bench_back = ColorRect.new()
+        bench_back.color = Color(0.52, 0.42, 0.30)
+        bench_back.position = Vector2(cr.position.x, cr.position.y - 30)
+        bench_back.size = Vector2(w_px, 6)
+        bench_back.z_index = -1
+        node.add_child(bench_back)
+        var bench_seat = ColorRect.new()
+        bench_seat.color = Color(0.62, 0.48, 0.34)
+        bench_seat.position = cr.position
+        bench_seat.size = Vector2(w_px, 8)
+        bench_seat.z_index = -1
+        node.add_child(bench_seat)
+        for leg_x in [0.08, 0.50, 0.92]:
+            var bench_leg = ColorRect.new()
+            bench_leg.color = Color(0.44, 0.44, 0.48)
+            bench_leg.position = Vector2(cr.position.x + w_px * leg_x - 4, cr.position.y + 8)
+            bench_leg.size = Vector2(8, h_draw_px - 8)
+            bench_leg.z_index = -1
+            node.add_child(bench_leg)
 
     elif o_id == "basketball_board":
         # 体育館のバスケゴール（天井からぶら下がる）
@@ -3869,36 +4006,42 @@ static func _build_obstacle(obs: Dictionary, parent: Node2D, cm_to_px: float, st
     # ---------------------------------------------------------
 
 
-    # 基準となる高さのライン（黄色線）
-    var line = Line2D.new()
-    line.add_point(Vector2(obs["x"] * cm_to_px, -h_px))
-    line.add_point(Vector2(obs["x2"] * cm_to_px, -h_px))
-    line.width = 3.0
-    line.default_color = Color(1.0, 1.0, 0.2, 0.9) # やや明るい黄色
-    line.z_as_relative = false
-    line.z_index = 10 # 全てのビジュアルより手前
-    node.add_child(line)
+    var hide_overlay: bool = o_id in ["shop_awning", "station_name_sign", "station_sign_gakuenmae"]
+    if not hide_overlay:
+        # 基準となる高さのライン（黄色線）
+        var line = Line2D.new()
+        line.add_point(Vector2(obs["x"] * cm_to_px, -h_px))
+        line.add_point(Vector2(obs["x2"] * cm_to_px, -h_px))
+        line.width = 3.0
+        line.default_color = Color(1.0, 1.0, 0.2, 0.9) # やや明るい黄色
+        line.z_as_relative = false
+        line.z_index = 10 # 全てのビジュアルより手前
+        node.add_child(line)
 
-    # ラベル（名前と高さ）
-    var label = Label.new()
-    var display_name = str(obs["id"]).capitalize()
-    label.text = "%s\n%.0f cm" % [display_name, h_cm]
-    label.add_theme_color_override("font_color", Color.WHITE)
-    label.add_theme_color_override("font_outline_color", Color.BLACK)
-    label.add_theme_constant_override("outline_size", 4)
-    label.add_theme_font_size_override("font_size", 14)
-    label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    
-    # 表示位置の調整
-    label.size = Vector2(w_px, 40)
-    label.position = Vector2(obs["x"] * cm_to_px, -h_px - 45)
-    label.z_as_relative = false
-    label.z_index = 10 # 全てのビジュアルより手前
-    
-    node.add_child(label)
+        # ラベル（名前と高さ）
+        var label = Label.new()
+        var display_name = str(obs["id"]).capitalize()
+        label.text = "%s\n%.0f cm" % [display_name, h_cm]
+        label.add_theme_color_override("font_color", Color.WHITE)
+        label.add_theme_color_override("font_outline_color", Color.BLACK)
+        label.add_theme_constant_override("outline_size", 4)
+        label.add_theme_font_size_override("font_size", 14)
+        label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+        # 表示位置の調整
+        label.size = Vector2(w_px, 40)
+        label.position = Vector2(obs["x"] * cm_to_px, -h_px - 45)
+        label.z_as_relative = false
+        label.z_index = 10 # 全てのビジュアルより手前
+
+        node.add_child(label)
     parent.add_child(node)
 
 static func get_obstacle_comment(obs_id: String, h: float, oh: float) -> String:
+    if obs_id == "door_to_school_hallway_high":
+        if h > oh:
+            return "高校の校門（高さ%dcm）。\nあなた（%dcm）は%dcm頭が当たります！" % [oh, h, round(h - oh)]
+        return "高校の校門（高さ%dcm）。" % oh
     if obs_id.begins_with("door_to_school_hallway"):
         if h > oh:
             return "学校の廊下への入口（高さ%dcm）。\nあなた（%dcm）は%dcm頭が当たります！" % [oh, h, round(h - oh)]
@@ -3966,7 +4109,7 @@ static func get_obstacle_comment(obs_id: String, h: float, oh: float) -> String:
                 return "学校の入口（高さ%dcm）。\nあなた（%dcm）は%dcm頭が当たります！" % [oh, h, round(h - oh)]
             else:
                 return "学校の入口（%dcm）。いってらっしゃい！" % oh
-        "door_left", "door_right", "side_door", "door_3", "door_4", "door_to_myroom", "door_to_school_hallway_high":
+        "door_left", "door_right", "side_door", "door_3", "door_4", "door_to_myroom":
             if h > oh:
                 return "ドア（高さ%dcm）。あなた（%dcm）は%dcm頭が当たります！" % [oh, h, round(h - oh)]
             else:
@@ -4120,6 +4263,8 @@ static func get_obstacle_comment(obs_id: String, h: float, oh: float) -> String:
             return "ホームのベンチ（%dcm）。\n長身だと膝が高く突き出してしまいますね。" % oh
         "platform_bench", "platform_bench_small":
             return "ホームのベンチ（%dcm）。\n電車待ちの時間が少しだけゆっくり流れます。" % oh
+        "town_bench", "gym_bench":
+            return "ベンチ（%dcm）。\n少し腰掛けて休めそうです。" % oh
         "timetable":
             return "時刻表ボード（%dcm）。\n上の方まで楽々見えますね。" % oh
         "station_vending":
@@ -4131,6 +4276,8 @@ static func get_obstacle_comment(obs_id: String, h: float, oh: float) -> String:
             return "駅名看板です。『学園前』の文字が見えます。"
         "station_name_sign":
             return "駅名標です。『〇〇駅』と書いてあります。高さ%dcmの看板が目の前に。" % oh
+        "shop_awning":
+            return "お店のひさし（高さ%dcm）。\n頭上で日差しをさえぎってくれています。" % oh
         "bus":
             if h > oh:
                 return "路線バス（高さ%dcm）。\nあなた（%dcm）はバスより背が高い！" % [oh, h]
