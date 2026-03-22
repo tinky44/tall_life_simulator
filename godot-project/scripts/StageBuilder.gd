@@ -96,6 +96,7 @@ const STAGES = {
         "ceiling_height": null,
         "obstacles": [
             {"id": "town_bench", "x": 620, "x2": 800, "height": 42, "type": "ground"},
+            {"id": "traffic_signal", "x": 900, "x2": 928, "height": 250, "type": "background"},
             {"id": "door_to_school_hallway_middle", "x": 1140, "x2": 1390, "height": 220, "type": "overhead"}
         ]
     },
@@ -110,8 +111,7 @@ const STAGES = {
             {"id": "door_to_station", "x": 690, "x2": 790, "height": 200, "type": "overhead"},
             {"id": "car", "x": 810, "x2": 990, "height": 150, "type": "background"},
             {"id": "bus_stop_sign", "x": 1025, "x2": 1053, "height": 250, "type": "background"},
-            {"id": "door_to_school_hallway_elementary", "x": 1100, "x2": 1250, "height": 220, "type": "overhead"},
-            {"id": "traffic_signal", "x": 1215, "x2": 1243, "height": 250, "type": "background"}
+            {"id": "door_to_school_hallway_elementary", "x": 1100, "x2": 1250, "height": 220, "type": "overhead"}
         ]
     },
     "park": {
@@ -3825,52 +3825,48 @@ static func _build_obstacle(obs: Dictionary, parent: Node2D, cm_to_px: float, st
         var sign_post_color = Color(0.56, 0.58, 0.62)
         var sign_panel_color = Color(0.14, 0.48, 0.28) if o_id == "station_name_sign" else Color(0.16, 0.42, 0.66)
         var sign_frame_color = Color(0.10, 0.24, 0.14) if o_id == "station_name_sign" else Color(0.10, 0.22, 0.40)
-        var sign_board_y = -h_px * 0.72
-        for post_off in [w_px * 0.14, w_px * 0.86]:
+        var sign_panel_h = h_px * 0.22
+        var sign_panel_top = -h_px
+        var sign_panel_bottom = sign_panel_top + sign_panel_h
+        for post_off in [w_px * 0.22, w_px * 0.78]:
             var sign_post = ColorRect.new()
             sign_post.color = sign_post_color
-            sign_post.position = Vector2(sign_x + post_off - 5, -h_px)
-            sign_post.size = Vector2(10, h_px)
+            sign_post.position = Vector2(sign_x + post_off - 5, sign_panel_bottom)
+            sign_post.size = Vector2(10, -sign_panel_bottom)
             sign_post.z_index = -1
             node.add_child(sign_post)
-        var sign_arch = Polygon2D.new()
-        sign_arch.color = sign_panel_color
-        sign_arch.z_index = -1
-        sign_arch.polygon = PackedVector2Array([
-            Vector2(sign_x + w_px * 0.08, sign_board_y + h_px * 0.14),
-            Vector2(sign_x + w_px * 0.18, sign_board_y),
-            Vector2(sign_x + w_px * 0.82, sign_board_y),
-            Vector2(sign_x + w_px * 0.92, sign_board_y + h_px * 0.14),
-            Vector2(sign_x + w_px * 0.92, sign_board_y + h_px * 0.32),
-            Vector2(sign_x + w_px * 0.08, sign_board_y + h_px * 0.32),
-        ])
-        node.add_child(sign_arch)
+        var sign_board = ColorRect.new()
+        sign_board.color = sign_panel_color
+        sign_board.position = Vector2(sign_x + w_px * 0.12, sign_panel_bottom)
+        sign_board.size = Vector2(w_px * 0.76, sign_panel_h * 0.42)
+        sign_board.z_index = -1
+        node.add_child(sign_board)
         var sign_frame = ReferenceRect.new()
         sign_frame.editor_only = false
         sign_frame.border_color = sign_frame_color
         sign_frame.border_width = 3.0
-        sign_frame.position = Vector2(sign_x + w_px * 0.08, sign_board_y + h_px * 0.14)
-        sign_frame.size = Vector2(w_px * 0.84, h_px * 0.18)
+        sign_frame.position = Vector2(sign_x + w_px * 0.12, sign_panel_bottom)
+        sign_frame.size = Vector2(w_px * 0.76, sign_panel_h * 0.42)
         sign_frame.z_index = -1
         node.add_child(sign_frame)
         var sign_ruby = ColorRect.new()
         sign_ruby.color = Color(0.82, 0.82, 0.84, 0.85)
-        sign_ruby.position = Vector2(sign_x + w_px * 0.24, sign_board_y + h_px * 0.17)
-        sign_ruby.size = Vector2(w_px * 0.52, h_px * 0.03)
+        sign_ruby.position = Vector2(sign_x + w_px * 0.28, sign_panel_bottom + sign_panel_h * 0.08)
+        sign_ruby.size = Vector2(w_px * 0.44, sign_panel_h * 0.08)
         sign_ruby.z_index = -1
         node.add_child(sign_ruby)
         var sign_text = ColorRect.new()
         sign_text.color = Color(0.98, 0.98, 0.98)
-        sign_text.position = Vector2(sign_x + w_px * 0.20, sign_board_y + h_px * 0.22)
-        sign_text.size = Vector2(w_px * 0.60, h_px * 0.06)
+        sign_text.position = Vector2(sign_x + w_px * 0.22, sign_panel_bottom + sign_panel_h * 0.18)
+        sign_text.size = Vector2(w_px * 0.56, sign_panel_h * 0.14)
         sign_text.z_index = -1
         node.add_child(sign_text)
         if o_id == "station_name_sign":
             for arrow_dir in [0.0, 1.0]:
                 var side_panel = ColorRect.new()
                 side_panel.color = Color(0.18, 0.58, 0.34)
-                side_panel.position = Vector2(sign_x + w_px * (0.09 + arrow_dir * 0.73), sign_board_y + h_px * 0.18)
-                side_panel.size = Vector2(w_px * 0.10, h_px * 0.10)
+                side_panel.position = Vector2(sign_x + w_px * (0.13 + arrow_dir * 0.66), sign_panel_bottom + sign_panel_h * 0.10)
+                side_panel.size = Vector2(w_px * 0.08, sign_panel_h * 0.22)
                 side_panel.z_index = -1
                 node.add_child(side_panel)
 
