@@ -132,44 +132,6 @@ const DATA: Dictionary = {
 			{"speaker": "はるか", "text": "うわあ、また大きくなってる！ 夏休みどうだったの？"},
 			{"speaker": "はるか", "text": "バレー部、また続けるの？ 応援してるよ。"},
 		],
-		"term_school_haruka_support": [
-			{"speaker": "はるか", "text": "今日の教室、しんどくない？ なんかずっと肩に力入ってるっぽい。"},
-			{
-				"speaker": "主人公",
-				"text": "……どう返そう。",
-				"choices": [
-					{"label": "正直にしんどさを話す", "next": "term_school_haruka_open", "emotion": "confidence", "action": "stress:-5,note:はるかに教室で感じるしんどさを打ち明けられた。"},
-					{"label": "大丈夫だと笑ってごまかす", "next": "term_school_haruka_hold", "emotion": "complex", "action": "stress:+2,note:はるかの前でも大丈夫なふりをしてしまった。"},
-				]
-			},
-		],
-		"term_school_haruka_support_elementary": [
-			{"speaker": "はるか", "text": "きょうの きょうしつ、だいじょうぶ？ なんか ずっと かたに ちから はいってるよ。"},
-			{
-				"speaker": "主人公",
-				"text": "……どう こたえよう。",
-				"choices": [
-					{"label": "ほんとのことを はなす", "next": "term_school_haruka_open", "emotion": "confidence", "action": "stress:-5,note:はるかに教室で感じるしんどさを打ち明けられた。"},
-					{"label": "だいじょうぶって いう", "next": "term_school_haruka_hold", "emotion": "complex", "action": "stress:+2,note:はるかの前でも大丈夫なふりをしてしまった。"},
-				]
-			},
-		],
-		"term_school_haruka_open": [
-			{"speaker": "主人公", "text": "視線が集まるたび、ただ立ってるだけで疲れる時がある。"},
-			{"speaker": "はるか", "text": "そっか。つらい日はさ、席でも保健室でも一緒に行こ。"},
-		],
-		"term_school_haruka_open_elementary": [
-			{"speaker": "主人公", "text": "みんなに みられると、ただ たってるだけで つかれちゃう。"},
-			{"speaker": "はるか", "text": "そっか。つらい日は せきでも ほけんしつでも、わたしと いっしょに いこ。"},
-		],
-		"term_school_haruka_hold": [
-			{"speaker": "主人公", "text": "……平気。たぶん、いつものことだから。"},
-			{"speaker": "はるか", "text": "そっか。でも、無理してる時ってけっこう分かるよ。あとででも声かけて。"},
-		],
-		"term_school_haruka_hold_elementary": [
-			{"speaker": "主人公", "text": "……へいき。たぶん、だいじょうぶ。"},
-			{"speaker": "はるか", "text": "そっか。でも、むりしてるとき わかるよ。あとででも こえかけてね。"},
-		],
 	},
 	"senior": {
 		"first_meet": [
@@ -327,8 +289,8 @@ const DATA: Dictionary = {
 				"speaker": "（主人公）",
 				"text": "食卓の前で立ち止まる。どうしよう。",
 				"choices": [
-					{"label": "そのまま一緒に座る", "next": "term_home_table_stay", "emotion": "confidence", "action": "stress:-4,note:食卓で家族と一緒に座る時間を取れた。"},
-					{"label": "やっぱり部屋に戻る", "next": "term_home_table_leave", "emotion": "complex", "action": "stress:+2,note:食卓の前で少しためらってから部屋に戻った。"},
+					{"label": "そのまま一緒に座る", "next": "term_home_table_stay", "emotion": "confidence", "action": "note:食卓で家族と一緒に座る時間を取れた。"},
+					{"label": "やっぱり部屋に戻る", "next": "term_home_table_leave", "emotion": "complex", "action": "note:食卓の前で少しためらってから部屋に戻った。"},
 				]
 			},
 		],
@@ -340,44 +302,6 @@ const DATA: Dictionary = {
 			{"speaker": "（主人公）", "text": "……今日は、まだうまく座れそうにない。"},
 			{"speaker": "お母さん", "text": "そっか。また気が向いたら来て。お茶、いつでも入れるから。"},
 		],
-		"term_school": [
-			{"speaker": "（主人公）", "text": "また後ろの席だ。みんなの視線が、少しだけ気になる。"},
-			{
-				"speaker": "（主人公）",
-				"text": "でも、今学期はどう向き合おう？",
-				"choices": [
-					{"label": "目立っても、ちゃんと通う", "next": "term_school_brave", "emotion": "confidence", "action": "stress:-4"},
-					{"label": "やっぱり少ししんどい", "next": "term_school_tired", "emotion": "complex", "action": "stress:+4"},
-				]
-			},
-		],
-		"term_school_elementary": [
-			{"speaker": "（主人公）", "text": "また いちばん うしろの せきだ。みんなの めが、ちょっと きになる。"},
-			{
-				"speaker": "（主人公）",
-				"text": "こんがっき、どうしよう？",
-				"choices": [
-					{"label": "めだっても がんばって いく", "next": "term_school_brave", "emotion": "confidence", "action": "stress:-4"},
-					{"label": "やっぱり ちょっと しんどい", "next": "term_school_tired", "emotion": "complex", "action": "stress:+4"},
-				]
-			},
-		],
-		"term_school_brave": [
-			{"speaker": "（主人公）", "text": "……大丈夫。見られても、ちゃんとここにいる。"},
-			{"speaker": "はるか", "text": "うん、その調子。今学期も一緒にやっていこう。"},
-		],
-		"term_school_brave_elementary": [
-			{"speaker": "（主人公）", "text": "……だいじょうぶ。みられても、ちゃんと いく。"},
-			{"speaker": "はるか", "text": "うん、そのちょうし。こんがっきも いっしょだよ。"},
-		],
-		"term_school_tired": [
-			{"speaker": "（主人公）", "text": "……ちょっと、息が詰まる。"},
-			{"speaker": "はるか", "text": "無理しすぎないでね。しんどい時は、ちゃんと休もう。"},
-		],
-		"term_school_tired_elementary": [
-			{"speaker": "（主人公）", "text": "……ちょっと、むねが きゅってする。"},
-			{"speaker": "はるか", "text": "むりしすぎないでね。しんどかったら、ちゃんと やすも。"},
-		],
 		"term_school_seat": [
 			{"speaker": "（主人公）", "text": "自分の席に座る。机の高さは昔のままなのに、見える景色だけが少し変わっている。"},
 			{"speaker": "（主人公）", "text": "落ち着かない。でも、ここで過ごすしかないんだ。"},
@@ -387,42 +311,14 @@ const DATA: Dictionary = {
 			{"speaker": "（主人公）", "text": "なんだか そわそわする。でも、ここで すごすんだ。"},
 		],
 		"term_school_infirmary": [
-			{"speaker": "保健の先生", "text": "顔が少しかたいわね。座って、少し話してみる？"},
-			{
-				"speaker": "（主人公）",
-				"text": "……どうしよう。ちゃんと話したほうがいいかな。",
-				"choices": [
-					{"label": "しんどさを正直に話す", "next": "term_school_infirmary_open", "emotion": "confidence", "action": "stress:-6,note:保健室でしんどさを正直に話せた。"},
-					{"label": "平気だと言って戻る", "next": "term_school_infirmary_hold", "emotion": "complex", "action": "stress:+3,note:保健室でも平気なふりをしてしまった。"},
-				]
-			},
+			{"speaker": "保健の先生", "text": "少し休んでいく？ 教室とちがう場所にいるだけでも、気持ちは変わるものよ。"},
+			{"speaker": "（主人公）", "text": "椅子に座って、ひと息つく。"},
+			{"speaker": "保健の先生", "text": "また気になったら、いつでもおいで。"},
 		],
 		"term_school_infirmary_elementary": [
-			{"speaker": "保健の先生", "text": "顔が少しかたいわね。座って、ちょっとお話ししてみる？"},
-			{
-				"speaker": "（主人公）",
-				"text": "……どうしよう。ほんとのこと、いったほうが いいかな。",
-				"choices": [
-					{"label": "しんどいって はなす", "next": "term_school_infirmary_open", "emotion": "confidence", "action": "stress:-6,note:保健室でしんどさを正直に話せた。"},
-					{"label": "だいじょうぶって いう", "next": "term_school_infirmary_hold", "emotion": "complex", "action": "stress:+3,note:保健室でも平気なふりをしてしまった。"},
-				]
-			},
-		],
-		"term_school_infirmary_open": [
-			{"speaker": "（主人公）", "text": "……最近、視線が気になって、ずっと肩に力が入るんです。"},
-			{"speaker": "保健の先生", "text": "話してくれてよかった。無理して平気なふりをするより、そうして教えてくれるほうが先生は安心するわ。"},
-		],
-		"term_school_infirmary_open_elementary": [
-			{"speaker": "（主人公）", "text": "……みんなの めが きになって、ずっと かたに ちからが はいっちゃう。"},
-			{"speaker": "保健の先生", "text": "話してくれてありがとう。無理してがまんするより、ちゃんと先生に教えてくれるほうがずっといいの。"},
-		],
-		"term_school_infirmary_hold": [
-			{"speaker": "（主人公）", "text": "……大丈夫です。ちょっと疲れてるだけです。"},
-			{"speaker": "保健の先生", "text": "そう。無理はしないでね。つらくなったら、いつでも戻っていらっしゃい。"},
-		],
-		"term_school_infirmary_hold_elementary": [
-			{"speaker": "（主人公）", "text": "……だいじょうぶ。ちょっと つかれただけ。"},
-			{"speaker": "保健の先生", "text": "そう。つらくなったら、また先生のところへおいで。"},
+			{"speaker": "保健の先生", "text": "ちょっと やすんでいく？ きょうしつと ちがう ばしょに いるだけでも、らくになること あるのよ。"},
+			{"speaker": "（主人公）", "text": "いすに すわって、ひといき つく。"},
+			{"speaker": "保健の先生", "text": "また きになったら、いつでも きてね。"},
 		],
 		"term_station_bench": [
 			{"speaker": "（主人公）", "text": "ベンチに腰を下ろす。人の流れを見ていると、自分だけ少し別の速さで立っていた気がした。"},
@@ -459,9 +355,9 @@ const DATA: Dictionary = {
 				"speaker": "（主人公）",
 				"text": "持ってみようか、どうしよう。",
 				"choices": [
-					{"label": "片づける", "next": "randoseru_farewell_pack", "emotion": "confidence", "action": "stress:-2,note:ランドセルを静かに片づけた。"},
+					{"label": "片づける", "next": "randoseru_farewell_pack", "emotion": "confidence", "action": "note:ランドセルを静かに片づけた。"},
 					{"label": "少し名残惜しく眺める", "next": "randoseru_farewell_look", "action": "note:ランドセルをしばらく眺めた。"},
-					{"label": "肩に当ててみる", "next": "randoseru_farewell_hold", "action": "stress:+1"},
+					{"label": "肩に当ててみる", "next": "randoseru_farewell_hold"},
 				]
 			},
 		],
@@ -515,8 +411,8 @@ const DATA: Dictionary = {
 				"speaker": "（主人公）",
 				"text": "（なんて いえば いいんだろう）",
 				"choices": [
-					{"label": "気にしないでいる", "next": "elem_tease_ignore", "emotion": "confidence", "action": "stress:-2"},
-					{"label": "少しだけへこむ", "next": "elem_tease_sad", "emotion": "complex", "action": "stress:+3"},
+					{"label": "気にしないでいる", "next": "elem_tease_ignore", "emotion": "confidence"},
+					{"label": "少しだけへこむ", "next": "elem_tease_sad", "emotion": "complex"},
 				]
 			},
 		],
@@ -608,8 +504,8 @@ const DATA: Dictionary = {
 				"speaker": "（主人公）",
 				"text": "（なんて答えればいいんだろう）",
 				"choices": [
-					{"label": "笑って『違います』と言う", "emotion": "confidence", "action": "stress:-2"},
-					{"label": "目をそらす", "emotion": "complex", "action": "stress:+4"}
+					{"label": "笑って『違います』と言う", "emotion": "confidence"},
+					{"label": "目をそらす", "emotion": "complex"}
 				]
 			},
 		],
@@ -619,8 +515,8 @@ const DATA: Dictionary = {
 				"speaker": "（主人公）",
 				"text": "（ざわつきが一斉にこっちへ向く）",
 				"choices": [
-					{"label": "軽く会釈する", "emotion": "confidence", "action": "stress:-1"},
-					{"label": "肩をすくめてやり過ごす", "emotion": "complex", "action": "stress:+5"}
+					{"label": "軽く会釈する", "emotion": "confidence"},
+					{"label": "肩をすくめてやり過ごす", "emotion": "complex"}
 				]
 			},
 		],

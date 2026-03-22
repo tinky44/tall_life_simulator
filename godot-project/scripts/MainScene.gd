@@ -146,8 +146,6 @@ const TERM_HOTSPOTS: Dictionary = {
 		"prompt": "鏡を見る",
 		"dialogue_npc": "player",
 		"dialogue_key": "term_home_mirror",
-		"stress_delta": -4,
-		"feedback": "鏡の前で呼吸が少し整う",
 		"memory_note": "洗面台の鏡の前で、自分の背丈を静かに見つめた。"
 	},
 	"home_table": {
@@ -170,8 +168,6 @@ const TERM_HOTSPOTS: Dictionary = {
 		"dialogue_key": "term_school_seat",
 		"pose": "chair_sit",
 		"sit_dir": -1,
-		"stress_delta": 2,
-		"feedback": "席に座ると少しだけ視線を意識する",
 		"memory_note": "教室の自分の席に座り、視線の中で過ごす実感が残った。",
 		"repeatable": true
 	},
@@ -190,8 +186,6 @@ const TERM_HOTSPOTS: Dictionary = {
 		"dialogue_npc": "player",
 		"dialogue_key": "term_station_bench",
 		"pose": "chair_sit",
-		"stress_delta": -4,
-		"feedback": "人波から少し距離を取れた",
 		"memory_note": "駅のベンチで一息つき、人の流れを少し離れて眺めた。",
 		"seat_height_cm": 45.0,
 		"repeatable": true
@@ -203,8 +197,6 @@ const TERM_HOTSPOTS: Dictionary = {
 		"dialogue_npc": "player",
 		"dialogue_key": "term_station_vending",
 		"pose": "reach_low",
-		"stress_delta": 3,
-		"feedback": "立ち止まると視線が集まりやすい",
 		"memory_note": "駅の自販機の前で、立ち止まるだけでも目立つと感じた。",
 		"repeatable": true
 	},
@@ -216,8 +208,6 @@ const TERM_HOTSPOTS: Dictionary = {
 		"dialogue_key": "gymnasium_basket_reach",
 		"pose": "reach_up",
 		"height_min": 185.0,
-		"stress_delta": -5,
-		"feedback": "手を上げた瞬間、体の伸びやかさに少し気持ちがほぐれた。",
 		"memory_note": "バスケゴールに手を伸ばしたら、いつもより高さが近く感じられた。",
 		"repeatable": true
 	},
@@ -238,8 +228,6 @@ const TERM_HOTSPOTS: Dictionary = {
 		"dialogue_npc": "player",
 		"dialogue_key": "elem_tease",
 		"age_max": 11,
-		"stress_delta": 2,
-		"feedback": "視線を感じる場所では少し気を張ってしまう",
 		"memory_note": "校庭の遊具の近くで、男子に声をかけられた。"
 	},
 	"park_supplement_vendor": {
@@ -263,63 +251,8 @@ const TERM_HOTSPOTS: Dictionary = {
 	},
 }
 
-const STRESS_PREFIX_KEYS: Array[String] = ["default", "tall", "huge", "check"]
 const DIALOGUE_STAGE_SUFFIXES: Array[String] = ["elementary", "middle", "high"]
 const GROWTH_SLEEP_CHANCE := 0.15
-const NPC_STRESS_OPENERS: Dictionary = {
-	"haruka": {
-		"low": {"speaker": "はるか", "text": "今日は少し顔つきがやわらかいね。"},
-		"mid": {"speaker": "はるか", "text": "無理してない？ ちょっと肩に力が入ってる。"},
-		"high": {"speaker": "はるか", "text": "かなりしんどそう。少し端で話そっか。"},
-	},
-	"mother": {
-		"low": {"speaker": "母", "text": "今日は少し楽そうな顔をしてるね。"},
-		"mid": {"speaker": "母", "text": "背中、少し丸くなってるわよ。無理してない？"},
-		"high": {"speaker": "母", "text": "顔がこわばってる。今日は休めるところで休みなさい。"},
-	},
-	"father": {
-		"low": {"speaker": "父", "text": "今日はいつもより落ち着いて見えるな。"},
-		"mid": {"speaker": "父", "text": "少し疲れてるか。気を張りすぎるなよ。"},
-		"high": {"speaker": "父", "text": "かなり参ってる顔だ。ひとりで抱え込むなよ。"},
-	},
-	"nurse": {
-		"low": {"speaker": "保健の先生", "text": "今日は少し落ち着いてるわね。いい顔してる。"},
-		"mid": {"speaker": "保健の先生", "text": "少し肩が上がってるわ。座っていくだけでもいいのよ。"},
-		"high": {"speaker": "保健の先生", "text": "だいぶつらそうね。まず座って、息を整えましょう。"},
-	},
-	"senior": {
-		"low": {"speaker": "バレー部先輩", "text": "今日は動けそうな顔してるじゃん。"},
-		"mid": {"speaker": "バレー部先輩", "text": "視線が気になる日か。呼吸だけでも合わせてみる？"},
-		"high": {"speaker": "バレー部先輩", "text": "かなり張ってるね。無理する前に言ってよ。"},
-	},
-	"generic": {
-		"low": {"speaker": "通りすがり", "text": "背が高いね。なんだか今日は堂々として見える。"},
-		"mid": {"speaker": "通りすがり", "text": "大丈夫？ ちょっと疲れて見えるけど。"},
-		"high": {"speaker": "通りすがり", "text": "平気？ 顔色、あまりよくないみたい。"},
-	},
-}
-const STRESS_IDLE_MONOLOGUES: Dictionary = {
-	"home": {
-		"low": "家の中では、ちょっと気が楽だ。",
-		"mid": "家ではゆっくりしたい。外みたいに背筋を張らなくていい。",
-		"high": "今日は疲れた。少し横になりたい。",
-	},
-	"school": {
-		"low": "今日は授業に集中できそう。",
-		"mid": "教室に入る前に、少し深呼吸しよう。",
-		"high": "しんどい。はるかか保健室に声をかけよう。",
-	},
-	"station": {
-		"low": "混んでるけど、まあ大丈夫。",
-		"mid": "視線が気になる。人の波を少し外れたい。",
-		"high": "人が多くて疲れてきた。ベンチで休もう。",
-	},
-	"default": {
-		"low": "今日はわりと落ち着いてる。",
-		"mid": "少し気持ちが揺れてる。ゆっくり行こう。",
-		"high": "気持ちが張りつめてる。少し休まないと。",
-	},
-}
 
 func _ready() -> void:
 	# 既存のテスト用古いノード群があれば削除
@@ -1014,22 +947,6 @@ func _is_term_intro_dialogue() -> bool:
 		"summer_growth_vball"
 	]
 
-func _get_stress_state_text(stress_value: int) -> String:
-	if stress_value >= 75:
-		return "かなり張りつめている"
-	if stress_value >= 45:
-		return "少ししんどい"
-	if stress_value >= 20:
-		return "やや緊張している"
-	return "落ち着いている"
-
-func _get_stress_band(stress_value: int) -> String:
-	if stress_value >= 70:
-		return "high"
-	if stress_value >= 35:
-		return "mid"
-	return "low"
-
 func _get_dialogue_school_suffix() -> String:
 	var global = get_node_or_null("/root/Global")
 	if not global:
@@ -1057,33 +974,7 @@ func _build_dialogue_sequence(npc_id: String, key: String) -> Array:
 	var base_lines: Array = npc_data.get(resolved_key, []).duplicate(true)
 	if base_lines.is_empty():
 		return []
-	if npc_id == "player":
-		return base_lines
-	if not STRESS_PREFIX_KEYS.has(key):
-		return base_lines
-	# 初対面（first_meet相当）のキーには感情openerを追加しない
-	if key == "first_meet":
-		return base_lines
-	# Globalで面識なしのNPCには感情openerを追加しない
-	var global = get_node_or_null("/root/Global")
-	if global and npc_id != "" and npc_id != "generic":
-		if not global.met_npcs.has(npc_id):
-			return base_lines
-	var opener: Dictionary = _get_stress_dialogue_opener(npc_id)
-	if opener.is_empty():
-		return base_lines
-	var merged_lines: Array = [opener]
-	merged_lines.append_array(base_lines)
-	return merged_lines
-
-func _get_stress_dialogue_opener(npc_id: String) -> Dictionary:
-	var global = get_node_or_null("/root/Global")
-	if not global:
-		return {}
-	var band: String = _get_stress_band(int(global.stress))
-	var opener_set: Dictionary = NPC_STRESS_OPENERS.get(npc_id, NPC_STRESS_OPENERS.get("generic", {}))
-	var opener: Variant = opener_set.get(band, {})
-	return opener.duplicate(true) if opener is Dictionary else {}
+	return base_lines
 
 func _get_stage_mood_bucket(stage_id: String) -> String:
 	if stage_id == "room" or stage_id == "myroom":
@@ -1095,11 +986,7 @@ func _get_stage_mood_bucket(stage_id: String) -> String:
 	return "default"
 
 func _get_idle_monologue_text(global: Node) -> String:
-	if not global:
-		return ""
-	var stage_bucket: String = _get_stage_mood_bucket(String(global.current_stage_id))
-	var monologue_set: Dictionary = STRESS_IDLE_MONOLOGUES.get(stage_bucket, STRESS_IDLE_MONOLOGUES.get("default", {}))
-	return String(monologue_set.get(_get_stress_band(int(global.stress)), ""))
+	return ""
 
 func _is_too_big_for_house_rest(global: Node) -> bool:
 	if not global:
@@ -1140,7 +1027,6 @@ func _get_default_action_hint_text() -> String:
 	var park_rest_hint: String = _get_park_rest_guidance_text(global)
 	if park_rest_hint != "":
 		return park_rest_hint
-	var band: String = _get_stress_band(int(global.stress))
 	var stage_bucket: String = _get_stage_mood_bucket(String(global.current_stage_id))
 	var vball_phase: int = Global.vball_story_phase
 	if stage_bucket == "school":
@@ -1154,27 +1040,11 @@ func _get_default_action_hint_text() -> String:
 			return "脚のことを誰かに相談してみよう"
 	match stage_bucket:
 		"home":
-			if band == "high":
-				return "少し休める場所を探そう  [E] 調べる  [G] 記録"
-			if band == "mid":
-				return "家の中で落ち着ける場所を見てみよう  [E] 調べる  [G] 記録"
-			return "家で一息つけそうな物を調べよう  [E] 調べる  [G] 記録"
+			return "家で気になる場所を調べよう  [E] 調べる  [G] 記録"
 		"school":
-			if band == "high":
-				return "しんどさを抱えすぎる前に誰かと話してみよう  [E] 話す"
-			if band == "mid":
-				return "席や保健室で少し気持ちを整えよう  [E] 話す  [G] 記録"
-			return "教室や保健室で出来ることを探そう  [E] 話す  [G] 記録"
+			return "教室や気になる場所を見てみよう  [E] 調べる  [G] 記録"
 		"station":
-			if band == "high":
-				return "人の少ない場所でひと息つこう  [E] 調べる"
-			if band == "mid":
-				return "ベンチや自販機で気分を切り替えよう  [E] 調べる"
-			return "近くで出来る小さな行動を探そう  [E] 調べる"
-	if band == "high":
-		return "無理をしすぎる前に、落ち着ける場所を探そう"
-	if band == "mid":
-		return "少し気分転換してみよう  [Q] 設定  [G] 記録"
+			return "近くで気になる場所を見てみよう  [E] 調べる  [G] 記録"
 	return "[Q] 設定  [G] 記録  [E] 調べる"
 
 func _get_term_reflection_text(global: Node) -> String:
@@ -1184,16 +1054,16 @@ func _get_term_reflection_text(global: Node) -> String:
 		"home":
 			if balance >= 0:
 				return "家でゆっくりできたから、次の学期も何とかなりそう。"
-			return "家にいてもなんとなく落ち着けなかった。次は早めに休みたい。"
+			return "家で過ごした時間を、次の学期の支えにしていきたい。"
 		"school":
 			if balance >= 0:
 				return "色々あったけど、以前よりは学校に慣れてきた気がする。"
-			return "学校はまだしんどい。でも来学期も行くしかない。"
+			return "学校で感じたことを持ち帰って、次の学期に生かしていきたい。"
 		"station":
 			if balance >= 0:
 				return "人の多い場所も、だんだんやり過ごせるようになってきた。"
-			return "視線が気になるのはいつも通りだった。ベンチで一息つけただけよかった。"
-	return "今学期も色々あった。来学期はもう少し楽になるといいな。"
+			return "人の多い場所でも、自分の歩幅を少しずつ作っていきたい。"
+	return "今学期のことを抱えたままでも、次の学期へ進んでいけそうだ。"
 
 func _get_term_hotspot_id_for_obstacle(obs_id: String) -> String:
 	var global = get_node_or_null("/root/Global")
@@ -1254,15 +1124,11 @@ func _trigger_term_hotspot(hotspot_id: String) -> void:
 	# repeatable なホットスポットは「初回かどうか」を記録してからマーク
 	var already_done: bool = global.has_term_hotspot_done(hotspot_id)
 	global.mark_term_hotspot_done(hotspot_id)
-	# ストーリー系副作用（フラグ・ストレス・記憶）は初回のみ
+	# ストーリー系副作用（フラグ・記憶）は初回のみ
 	if not already_done:
 		var story_flag_done: String = String(hotspot_data.get("story_flag_done", ""))
 		if story_flag_done != "" and global.has_method("set_story_flag"):
 			global.set_story_flag(story_flag_done)
-		var stress_delta: int = int(hotspot_data.get("stress_delta", 0))
-		if stress_delta != 0:
-			global.add_stress(stress_delta)
-			_show_stress_feedback(stress_delta, String(hotspot_data.get("feedback", "")))
 		var memory_note: String = String(hotspot_data.get("memory_note", ""))
 		if memory_note != "":
 			global.append_term_memory_note(memory_note)
@@ -1578,13 +1444,6 @@ func _process_choice_action(action: String, global: Node) -> void:
 		var action_id: String = String(part).strip_edges()
 		if action_id == "":
 			continue
-		if action_id.begins_with("stress:"):
-			var delta_text: String = action_id.substr("stress:".length())
-			if delta_text.is_valid_int():
-				var stress_delta: int = int(delta_text)
-				global.add_stress(stress_delta)
-				_show_stress_feedback(stress_delta)
-			continue
 		if action_id.begins_with("note:"):
 			global.append_term_memory_note(action_id.substr("note:".length()))
 			continue
@@ -1692,9 +1551,7 @@ func _end_dialogue() -> void:
 			global.growth_pain_pending = true
 	elif _current_dialogue_npc == "teacher" and _current_dialogue_key == "semester_start":
 		if global and StageBuilder.is_school_classroom_stage(String(global.current_stage_id)):
-			call_deferred("_start_dialogue", "player", "term_school")
-	elif _should_run_school_day_transition(global):
-		call_deferred("_run_school_day_transition")
+			call_deferred("_run_school_day_transition")
 
 	if global:
 		global._check_all_achievements()
@@ -1714,8 +1571,6 @@ func _is_school_hallway_stage() -> bool:
 
 func _should_run_school_day_transition(global: Node) -> bool:
 	if _school_day_transition_running:
-		return false
-	if _current_dialogue_npc != "player" or _current_dialogue_key != "term_school":
 		return false
 	if global == null:
 		return false
@@ -1903,9 +1758,6 @@ func _interact_with_npc(npc: Node) -> void:
 			if unrecorded:
 				_start_dialogue("haruka", "height_check_invite")
 				return
-			elif global and StageBuilder.is_school_classroom_stage(String(global.current_stage_id)) and not global.has_term_hotspot_done("school_haruka_support"):
-				key = "term_school_haruka_support"
-				global.mark_term_hotspot_done("school_haruka_support")
 			elif global and global.is_leg_pain and vball_phase == 3:
 				key = "vball_pain_consult"
 			elif global and not global.haruka_invited_this_term:
@@ -2012,14 +1864,6 @@ func _show_mood_feedback(text: String, positive: bool) -> void:
 	mood_feedback_label.add_theme_color_override("font_color", font_color)
 	_mood_feedback_time_left = 1.5
 	mood_feedback_label.show()
-
-func _show_stress_feedback(delta: int, detail: String = "") -> void:
-	if delta == 0:
-		return
-	var feedback_text: String = "%+d stress" % delta
-	if detail != "":
-		feedback_text += "  " + detail
-	_show_mood_feedback(feedback_text, delta < 0)
 
 func _on_screenshot_saved(result: Dictionary) -> void:
 	var file_name := String(result.get("file_name", "capture.png"))
@@ -3107,7 +2951,6 @@ func _update_ui():
 	
 	var age_val: int = global.age if global else 0
 	var term_val: int = global.term if global else 0
-	var stress_val: int = global.stress if global else 0
 	var text = "【基本情報】\n"
 	text += "Stage: %s\n" % stage_name
 	text += "day %d/%d\n" % [
@@ -3115,7 +2958,6 @@ func _update_ui():
 		int(global.term_total_days) if global else 30,
 	]
 	text += "%d歳 / %s\n" % [age_val, Global.get_school_term_label(age_val, term_val)]
-	text += "stress: %d / 100 (%s)\n" % [int(stress_val), _get_stress_state_text(int(stress_val))]
 	var confidence_val: int = global.self_confidence if global else 0
 	var complex_val: int = global.self_complex if global else 0
 	text += "気持ち: 受容 %d / 戸惑い %d\n" % [confidence_val, complex_val]
@@ -4076,7 +3918,6 @@ func _show_measurement_result(return_to_myroom: bool = false, animate: bool = fa
 	detail += "同学年平均：%.1f cm  （差：%+.1f cm）\n\n" % [avg_h, diff_avg]
 	detail += global.get_measurement_comment(diff_avg)
 	detail += "\n\n【今学期の手触り】\n"
-	detail += "stress %d / 100 (%s)\n" % [int(global.stress), _get_stress_state_text(int(global.stress))]
 	if global.term_memory_note != "":
 		detail += "%s\n" % String(global.term_memory_note)
 	detail += _get_term_reflection_text(global)
