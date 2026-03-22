@@ -130,6 +130,21 @@ static func get_side_garment_waist_pos(ctx: DrawContext) -> Vector2:
 	var torso_dir = torso_vec.normalized() if torso_vec.length() > 0.01 else Vector2(0, 1)
 	return shoulder + torso_dir * u_arm
 
+static func get_side_skirt_top_edge(ctx: DrawContext, waist_pos: Vector2, base_width: float, fallback_u: Vector2 = Vector2(0, 1)) -> Dictionary:
+	var d = ctx.d
+	var crotch_pos = Vector2(d["cx"], d["cy"])
+	var torso_u = _normalized_or(crotch_pos - waist_pos, fallback_u)
+	var top_n = Vector2(-torso_u.y, torso_u.x).normalized()
+	var half_top = base_width / 2.0
+	return {
+		"crotch_pos": crotch_pos,
+		"torso_u": torso_u,
+		"top_n": top_n,
+		"half_top": half_top,
+		"belt_back": waist_pos + top_n * half_top,
+		"belt_front": waist_pos - top_n * half_top,
+	}
+
 # ジャンパー系トップスが正面・背面で共有するウエスト上端位置。
 # 側面と同じ「肩から胴体上部を一定距離 내려る」基準を、
 # 正面投影された胴体長へ比率変換して合わせる。
@@ -161,6 +176,45 @@ static func get_side_sailor_waist_pos(ctx: DrawContext) -> Vector2:
 	if seated_blend > 0.0:
 		anchor = anchor.lerp(garment_anchor, seated_blend)
 	return anchor
+
+static func _build_side_jumper_chair_skirt_quad(ctx: DrawContext, belt_back: Vector2, belt_front: Vector2,
+		crotch_pos: Vector2, knee_l: Vector2, knee_r: Vector2, ankle_l: Vector2, ankle_r: Vector2,
+		skirt_length: float) -> Dictionary:
+	var front_knee: Vector2 = knee_l if knee_l.x >= knee_r.x else knee_r
+	var front_ankle: Vector2 = ankle_l if ankle_l.x >= ankle_r.x else ankle_r
+	var thigh_cover = max(ctx.thigh_w, 10.0)
+	var shin_cover = max(ctx.shin_w, 8.0)
+
+	var back_target = Vector2(
+		min(crotch_pos.x - thigh_cover * 0.82, belt_back.x - thigh_cover * 0.28),
+		max(crotch_pos.y + thigh_cover * 0.88, belt_back.y + skirt_length * 0.72)
+	)
+	var front_limit_y = front_ankle.y - shin_cover * 0.4
+	var front_floor_y = front_knee.y + max(thigh_cover * 0.55, 8.0)
+	var front_target_y = max(front_knee.y + 6.0, front_floor_y)
+	if front_limit_y > front_knee.y + 6.0:
+		front_target_y = clamp(front_floor_y, front_knee.y + 6.0, front_limit_y)
+	var knee_cover_x = front_knee.x + max(shin_cover * 0.95, thigh_cover * 0.65, 10.0)
+	var knee_ratio = clamp((front_knee.y - belt_front.y) / max(front_target_y - belt_front.y, 1.0), 0.18, 0.92)
+	var required_front_hem_x = belt_front.x + (knee_cover_x - belt_front.x) / knee_ratio
+	var front_cap_x = max(front_ankle.x + max(shin_cover * 1.6, thigh_cover * 1.15), knee_cover_x + thigh_cover * 1.1)
+	var front_target = Vector2(
+		min(max(required_front_hem_x, belt_front.x + 8.0), front_cap_x),
+		front_target_y
+	)
+
+	var back_dir = _normalized_or(back_target - belt_back, Vector2(-0.25, 1.0))
+	var front_dir = _normalized_or(front_target - belt_front, Vector2(0.85, 1.0))
+	# 座り時も布の前後辺長は立ち時のスカート丈と同じに保ち、下端の回転で形を作る。
+	var side_len = skirt_length
+	var back_hem = belt_back + back_dir * side_len
+	var front_hem = belt_front + front_dir * side_len
+
+	return {
+		"back_hem": back_hem,
+		"front_hem": front_hem,
+		"points": PackedVector2Array([belt_back, back_hem, front_hem, belt_front]),
+	}
 
 static func _normalized_or(v: Vector2, fallback: Vector2) -> Vector2:
 	if v.length() > 0.01:
@@ -372,7 +426,8 @@ static func draw_skirt(ctx: DrawContext, bottoms_type: String, bottoms_color: Co
 		var seated_factor = _get_deep_seated_factor(d)
 		var avg_leg_ang = (d["leg_l_angle"] + d["leg_r_angle"]) / 2.0
 		# スカートは布のため重力で多少下に向くので、脚の角度を完全に追うのではなく軽減(0.7倍)
-		var skirt_ang = (avg_leg_ang * 0.7) * PI / 180.0 + PI / 2.0
+		var leg_follow = 0.45 if (is_jumper_skirt and ctx.pose == "chair_sit") else 0.7
+		var skirt_ang = (avg_leg_ang * leg_follow) * PI / 180.0 + PI / 2.0
 		# 【調整用】背中の傾きをスカート角度に反映する。waist_angleが増えるほど前方へ傾く。
 		# ジャンパー系(blazer/blouse_bow/jumper_skirt)は構造が固いため50%追従。
 		# 通常スカートは布が重力に引かれるため30%追従。
@@ -414,14 +469,15 @@ static func draw_skirt(ctx: DrawContext, bottoms_type: String, bottoms_color: Co
 		var axis = p_bottom - waist_pos
 		var skirt_u = _normalized_or(axis, Vector2(0, 1))
 		var skirt_n = Vector2(-skirt_u.y, skirt_u.x).normalized()
-		var crotch_pos = Vector2(d["cx"], d["cy"])
-		var torso_u = _normalized_or(crotch_pos - waist_pos, skirt_u)
-		var top_n = Vector2(-torso_u.y, torso_u.x).normalized()
+		var top_edge = get_side_skirt_top_edge(ctx, waist_pos, base_width, skirt_u)
+		var crotch_pos = top_edge["crotch_pos"]
+		var torso_u = top_edge["torso_u"]
+		var top_n = top_edge["top_n"]
 		var extend_u = Vector2(0, 1)
-		var half_top = base_width / 2.0
+		var half_top = float(top_edge["half_top"])
 		var half_hem = side_hem_w / 2.0
-		var belt_back = waist_pos + top_n * half_top
-		var belt_front = waist_pos - top_n * half_top
+		var belt_back = top_edge["belt_back"]
+		var belt_front = top_edge["belt_front"]
 		var hem_back_base = p_bottom + skirt_n * half_hem
 		var hem_front_base = p_bottom - skirt_n * half_hem
 		var front_side = Vector2(1, 0)
@@ -432,6 +488,33 @@ static func draw_skirt(ctx: DrawContext, bottoms_type: String, bottoms_color: Co
 		var shin_draw = max(d["shin_l"] - foot_h, d["shin_l"] * 0.45)
 		var ankle_l = knee_l + Vector2(cos(ang_l + d["knee_l"]), sin(ang_l + d["knee_l"])) * shin_draw
 		var ankle_r = knee_r + Vector2(cos(ang_r + d["knee_r"]), sin(ang_r + d["knee_r"])) * shin_draw
+
+		if is_jumper_skirt and ctx.pose == "chair_sit":
+			var chair_quad = _build_side_jumper_chair_skirt_quad(ctx, belt_back, belt_front, crotch_pos, knee_l, knee_r, ankle_l, ankle_r, skirt_length)
+			var chair_back_hem: Vector2 = chair_quad["back_hem"]
+			var chair_front_hem: Vector2 = chair_quad["front_hem"]
+			var chair_pts: PackedVector2Array = chair_quad["points"]
+			ctx.canvas.draw_polygon(chair_pts, PackedColorArray([bottoms_color]))
+
+			var pleat_col = bottoms_color.darkened(0.2)
+			for i in range(1, 7):
+				var t = float(i) / 7.0
+				var top_p = belt_back.lerp(belt_front, t)
+				var bot_p = chair_back_hem.lerp(chair_front_hem, t)
+				var center_drop = max(ctx.thigh_w * 0.18, 4.0) * (1.0 - abs(t - 0.5) * 2.0)
+				var mid_p = top_p.lerp(bot_p, 0.55) + Vector2(0, center_drop)
+				ctx.canvas.draw_polyline(PackedVector2Array([top_p, mid_p, bot_p]), pleat_col, 1.5)
+
+			var belt_color = bottoms_color.darkened(0.35)
+			var belt_h = 7.0
+			var belt_pts = PackedVector2Array([
+				belt_back,
+				belt_front,
+				belt_front + torso_u * belt_h,
+				belt_back + torso_u * belt_h,
+			])
+			ctx.canvas.draw_polygon(belt_pts, PackedColorArray([belt_color]))
+			return
 
 		var outer_candidates: Array = []
 		var lower_candidates: Array = []

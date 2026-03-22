@@ -129,9 +129,15 @@ const FAST_TRAVEL_STAGES: Array[Dictionary] = [
 const TERM_HOTSPOT_ORDER = [
 	"home_mirror",
 	"home_table",
+	"myroom_desk",
 	"school_seat",
 	"school_infirmary",
 	"station_bench",
+	"platform_bench_rest",
+	"gakuenmae_bench_rest",
+	"town_bench_rest",
+	"gymnasium_bench_rest",
+	"schoolyard_bench_rest",
 	"station_vending",
 	"gymnasium_basket",
 	"randoseru_farewell",
@@ -155,6 +161,16 @@ const TERM_HOTSPOTS: Dictionary = {
 		"prompt": "食卓で一息つく",
 		"dialogue_npc": "player",
 		"dialogue_key": "term_home_table",
+		"pose": "chair_sit",
+		"seat_height_cm": 45.0,
+		"desk_height_cm": 72.0,
+		"repeatable": true
+	},
+	"myroom_desk": {
+		"stage_id": "myroom",
+		"obs_ids": ["chair_left", "desk_myroom"],
+		"trigger_obs_ids": ["chair_left"],
+		"prompt": "机の椅子に座る",
 		"pose": "chair_sit",
 		"seat_height_cm": 45.0,
 		"desk_height_cm": 72.0,
@@ -188,6 +204,47 @@ const TERM_HOTSPOTS: Dictionary = {
 		"pose": "chair_sit",
 		"memory_note": "駅のベンチで一息つき、人の流れを少し離れて眺めた。",
 		"seat_height_cm": 45.0,
+		"repeatable": true
+	},
+	"platform_bench_rest": {
+		"stage_id": "platform",
+		"obs_id": "platform_bench",
+		"prompt": "ベンチに座る",
+		"pose": "chair_sit",
+		"seat_height_cm": 45.0,
+		"repeatable": true
+	},
+	"gakuenmae_bench_rest": {
+		"stage_id": "gakuenmae",
+		"obs_id": "platform_bench_small",
+		"prompt": "ベンチに座る",
+		"pose": "chair_sit",
+		"seat_height_cm": 45.0,
+		"repeatable": true
+	},
+	"town_bench_rest": {
+		"stage_id": "adjacent_town",
+		"obs_id": "town_bench",
+		"prompt": "ベンチに座る",
+		"pose": "chair_sit",
+		"seat_height_cm": 45.0,
+		"repeatable": true
+	},
+	"gymnasium_bench_rest": {
+		"stage_id": "gymnasium",
+		"obs_id": "gym_bench",
+		"prompt": "ベンチに座る",
+		"pose": "chair_sit",
+		"seat_height_cm": 45.0,
+		"repeatable": true
+	},
+	"schoolyard_bench_rest": {
+		"stage_id": "schoolyard",
+		"obs_id": "gym_bench",
+		"prompt": "ベンチに座る",
+		"pose": "chair_sit",
+		"seat_height_cm": 45.0,
+		"age_min": 15,
 		"repeatable": true
 	},
 	"station_vending": {
@@ -1176,7 +1233,7 @@ func _trigger_term_hotspot(hotspot_id: String) -> void:
 		# chair_left/right: _nearby_obs_id から直接、その他: hotspot obs_ids の中から最近接 chair を探す
 		var chair_node_target: Node = null
 		var chair_obs_id_for_pos: String = ""
-		if "chair_left" in _nearby_obs_id or "chair_right" in _nearby_obs_id:
+		if "chair_left" in _nearby_obs_id or "chair_right" in _nearby_obs_id or "bench" in _nearby_obs_id or "seat" in _nearby_obs_id:
 			chair_obs_id_for_pos = _nearby_obs_id
 			for obs_child in get_children():
 				if obs_child.has_meta("obs_id") and String(obs_child.get_meta("obs_id")) == _nearby_obs_id:
@@ -1195,7 +1252,7 @@ func _trigger_term_hotspot(hotspot_id: String) -> void:
 				if not obs_child.has_meta("obs_id"):
 					continue
 				var oc_id: String = String(obs_child.get_meta("obs_id"))
-				if "chair" not in oc_id:
+				if "chair" not in oc_id and "bench" not in oc_id and "seat" not in oc_id:
 					continue
 				if not (oc_id in all_obs_arr):
 					continue
@@ -1219,6 +1276,8 @@ func _trigger_term_hotspot(hotspot_id: String) -> void:
 			if "chair_left" in chair_obs_id_for_pos:
 				# dir=1: 背面 = player.x - half_t → 背もたれ右面に合わせる
 				player.position.x = obs_x_cm * c2p + 8.0 + half_t
+			elif "bench" in chair_obs_id_for_pos or "seat" in chair_obs_id_for_pos:
+				player.position.x = (obs_x_cm + obs_x2_cm) * 0.5 * c2p
 			else:
 				# dir=-1 (flip): 背面 = player.x + half_t → 背もたれ左面に合わせる
 				player.position.x = obs_x2_cm * c2p - 8.0 - half_t
