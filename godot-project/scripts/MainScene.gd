@@ -416,11 +416,12 @@ func _setup_appearance_debug(vbox: VBoxContainer) -> void:
 	var hair_opt = OptionButton.new()
 	hair_opt.focus_mode = Control.FOCUS_NONE
 	hair_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var hair_values = ["short", "long", "ponytail", "side_tail"]
+	var hair_values = ["short", "long", "ponytail", "side_tail", "short_boy"]
 	hair_opt.add_item("ショート", 0)
 	hair_opt.add_item("ロング", 1)
 	hair_opt.add_item("ポニーテール", 2)
 	hair_opt.add_item("サイドテール", 3)
+	hair_opt.add_item("ショートボーイ", 4)
 	hair_opt.selected = max(0, hair_values.find(Global.current_appearance.get("hair_style", "short")))
 	hair_opt.item_selected.connect(func(idx: int) -> void:
 		Global.current_appearance["hair_style"] = hair_values[idx]
