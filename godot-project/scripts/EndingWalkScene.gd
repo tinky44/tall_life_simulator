@@ -46,6 +46,8 @@ var _growth_stages: Array = []
 var _obstacle_node: Node2D = null
 var _obstacle_height_cm := 165.0
 var _ducking := false
+var _initial_protagonist: Node = null
+var _comparison_node: Node2D = null
 
 
 func _ready() -> void:
@@ -133,19 +135,20 @@ func _spawn_characters() -> void:
 		return
 
 	var first_stage: Dictionary = _growth_stages[0]
-	var protagonist_x := _vp_size.x * 0.55
-	var haruka_x := _vp_size.x * 0.38
+	var protagonist_x := _vp_size.x * 0.30
+	var haruka_x := _vp_size.x * 0.60
 
 	# 主人公
 	var proto_params := _make_params(first_stage["height"])
 	var proto_appearance := _build_protagonist_appearance(first_stage["repr_age"])
 	_protagonist = _create_npc(proto_params, proto_appearance, protagonist_x)
 
-	# はるか
+	# はるか（主人公より前面に描画）
 	var haruka_h: float = _global.get_avg_height(first_stage["age"])
 	var haruka_params := _make_params_haruka(haruka_h)
 	var haruka_app := _build_haruka_appearance(first_stage["repr_age"])
 	_haruka = _create_npc(haruka_params, haruka_app, haruka_x)
+	_haruka.z_index = 1
 
 
 func _create_npc(params: Dictionary, app: Dictionary, x_pos: float) -> Node:
@@ -525,17 +528,99 @@ func _show_growth_summary() -> void:
 	if _growth_stages.is_empty():
 		return
 
-	var first_h: float = _growth_stages[0]["height"]
-	var last_h: float = _growth_stages[-1]["height"]
+	_walking = false
+
+	# はるかを非表示
+	if _haruka != null:
+		_haruka.visible = false
+
+	var first_stage: Dictionary = _growth_stages[0]
+	var last_stage: Dictionary = _growth_stages[-1]
+	var first_h: float = first_stage["height"]
+	var last_h: float = last_stage["height"]
 	var growth: float = last_h - first_h
 
-	_stage_label.text = ""
+	# キャラクター配置
+	var init_x := _vp_size.x * 0.33
+	var final_x := _vp_size.x * 0.57
+
+	# 最終主人公: 位置調整・停止
+	_protagonist.position.x = final_x
+	_protagonist.is_walking = false
+	_protagonist.visual_height_cm = last_h
+	_protagonist.character_drawer.queue_redraw()
+
+	# 初期主人公を生成（透過なし）
+	var init_params := _make_params(first_h)
+	var init_app := _build_protagonist_appearance(first_stage["repr_age"])
+	_initial_protagonist = _create_npc(init_params, init_app, init_x)
+	_initial_protagonist.visual_height_cm = first_h
+	_initial_protagonist.is_walking = false
+	_initial_protagonist.modulate.a = 1.0
+	_initial_protagonist.character_drawer.queue_redraw()
+
+	# 身長差インジケーター描画
+	_draw_comparison_ui(first_h, last_h, init_x, final_x)
+
+	# テキスト
+	_stage_label.text = "成長の記録"
 	_height_label.text = "%.0fcm → %.0fcm（+%.0fcm 成長！）" % [first_h, last_h, growth]
 
 	var tw := create_tween().set_parallel(true)
-	tw.tween_property(_stage_label, "modulate:a", 0.0, 0.3)
+	tw.tween_property(_stage_label, "modulate:a", 1.0, 0.4)
 	tw.tween_property(_height_label, "modulate:a", 1.0, 0.4)
 	await tw.finished
+
+
+func _draw_comparison_ui(first_h: float, last_h: float, init_x: float, final_x: float) -> void:
+	if _comparison_node != null:
+		_comparison_node.queue_free()
+
+	_comparison_node = Node2D.new()
+	_comparison_node.z_index = 5
+	add_child(_comparison_node)
+
+	var first_h_px: float = first_h * _global.CM_TO_PX
+	var last_h_px: float = last_h * _global.CM_TO_PX
+	var growth: float = last_h - first_h
+
+	# 矢印を2キャラの中間に配置
+	var mid_x := (init_x + final_x) / 2.0 + 10.0
+	var top_final := _ground_y - last_h_px   # 最終主人公の頭頂
+	var top_init  := _ground_y - first_h_px  # 初期主人公の頭頂
+
+	var arrow_color := Color(0.95, 0.25, 0.25, 1.0)
+	var line_w := 2.0
+	var tick_w := 14.0
+
+	# 縦線（頭頂差を繋ぐ）
+	var v_line := ColorRect.new()
+	v_line.color = arrow_color
+	v_line.position = Vector2(mid_x - line_w / 2.0, top_final)
+	v_line.size = Vector2(line_w, top_init - top_final)
+	_comparison_node.add_child(v_line)
+
+	# 上ティック（最終主人公の頭高さ）
+	var tick_top := ColorRect.new()
+	tick_top.color = arrow_color
+	tick_top.position = Vector2(mid_x - tick_w / 2.0, top_final - 1.0)
+	tick_top.size = Vector2(tick_w, 3.0)
+	_comparison_node.add_child(tick_top)
+
+	# 下ティック（初期主人公の頭高さ）
+	var tick_bot := ColorRect.new()
+	tick_bot.color = arrow_color
+	tick_bot.position = Vector2(mid_x - tick_w / 2.0, top_init - 1.0)
+	tick_bot.size = Vector2(tick_w, 3.0)
+	_comparison_node.add_child(tick_bot)
+
+	# "+XXcm" ラベル
+	var lbl := Label.new()
+	lbl.text = "+%.0fcm" % growth
+	lbl.add_theme_color_override("font_color", arrow_color)
+	lbl.add_theme_font_size_override("font_size", 22)
+	lbl.position = Vector2(mid_x + 6.0, (top_final + top_init) / 2.0 - 14.0)
+	_comparison_node.add_child(lbl)
 
 
 # ─── スキップ・遷移 ────────────────────────────────────────────

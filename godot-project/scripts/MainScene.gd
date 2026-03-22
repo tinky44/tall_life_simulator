@@ -2409,6 +2409,12 @@ func _setup_ui():
 	vbox.add_child(HSeparator.new())
 	_setup_appearance_debug(vbox)
 
+	vbox.add_child(HSeparator.new())
+	var dbg_ending_btn := Button.new()
+	dbg_ending_btn.text = "エンディングへ（デバッグ）"
+	dbg_ending_btn.pressed.connect(_debug_go_to_ending)
+	vbox.add_child(dbg_ending_btn)
+
 	sidebar.hide() # 初期状態は非表示。Qキーでトグル
 	ui_layer.add_child(sidebar)
 
@@ -4557,3 +4563,7 @@ func _toggle_history_panel() -> void:
 
 	history_panel.show()
 	get_tree().paused = true
+
+
+func _debug_go_to_ending() -> void:
+	get_tree().change_scene_to_file("res://scenes/EndingWalkScene.tscn")
