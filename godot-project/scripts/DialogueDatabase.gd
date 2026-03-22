@@ -308,9 +308,6 @@ const DATA: Dictionary = {
 		"summer_growth": [
 			{"speaker": "（主人公）", "text": "……制服のボタン、止まらない。"},
 			{"speaker": "（主人公）", "text": "夏休みの間に、こんなに伸びてたの？"},
-			{"speaker": "お母さん", "text": "ちょっと待って、また背が伸びた？"},
-			{"speaker": "お母さん", "text": "夏休みだけで10センチ？ そんなことある？"},
-			{"speaker": "お母さん", "text": "制服、買い直しね。もう丈が全然足りないわ。"},
 		],
 		"new_semester": [
 			{"speaker": "（主人公）", "text": "新学期か……。"},
@@ -454,8 +451,6 @@ const DATA: Dictionary = {
 		"summer_growth_vball": [
 			{"speaker": "（主人公）", "text": "……制服のボタン、全然止まらない。"},
 			{"speaker": "（主人公）", "text": "夏休みの間に、こんなに伸びてたの？"},
-			{"speaker": "お母さん", "text": "ちょっと待って……夏休みだけで10センチ？"},
-			{"speaker": "お母さん", "text": "制服も買い直しだし、バレー部のユニフォームも作り直しね。"},
 			{"speaker": "（主人公）", "text": "……来学期、部活に戻れるかな。脚の具合も気になるし。"},
 		],
 		"randoseru_farewell": [
