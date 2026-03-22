@@ -40,9 +40,14 @@ const MAP_AREAS: Array[Dictionary] = [
 
 const MAP_NODES: Dictionary = {
 	"myroom": {
-		"label":    "自宅",
+		"label":    "自室",
 		"stage_id": "myroom",
 		"pos":      Vector2(80, 80),
+	},
+	"park": {
+		"label":    "公園",
+		"stage_id": "park",
+		"pos":      Vector2(155, 60),
 	},
 	"station": {
 		"label":    "中央駅",
@@ -73,6 +78,7 @@ const MAP_NODES: Dictionary = {
 
 const MAP_EDGES: Array = [
 	["myroom",           "station"],
+	["myroom",           "park"],
 	["station",          "school_elementary"],
 	["station",          "school_middle"],
 	["station",          "gakuenmae"],

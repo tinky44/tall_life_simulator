@@ -28,6 +28,8 @@ var current_appearance: Dictionary = {
 	"bag_color": "#c01020"
 }
 
+const RANDOSERU_COLOR := "#c01020"
+
 var system_settings: Dictionary = {
 	"move_speed": 250.0
 }
@@ -130,6 +132,25 @@ var core_npcs: Dictionary = {
 			"bottoms_color": "#114422"
 		}
 	},
+	"park_giant": {
+		"name": "大男",
+		"role": "park",
+		"height_base": 200.0,
+		"height_mode": "fixed",
+		"greet_events": [
+			"今日は遊具より、こっちが目立ってるかもな。",
+			"公園に来ると、自分の背丈も少し落ち着いて見える。",
+			"でかい遊具を見ると、なんだか安心するんだよな。"
+		],
+		"appearance": {
+			"hair_style": "short_boy",
+			"hair_color": "#2a1d14",
+			"tops_type": "t_shirt",
+			"tops_color": "#4a6f66",
+			"bottoms_type": "pants",
+			"bottoms_color": "#2f3542"
+		}
+	},
 	"mother": {
 		"name": "お母さん",
 		"role": "family",
@@ -202,6 +223,9 @@ static func get_school_term_label(a: int, t: int) -> String:
 	if a >= 6:
 		return "%s %d学期" % [get_school_grade_name(a), get_term_in_school_year(a, t)]
 	return "%d歳 %d学期" % [a, get_term_in_school_year(a, t)]
+
+static func can_wear_randoseru_for_age(a: int) -> bool:
+	return a >= 6 and a <= 11
 
 static func get_base_growth(current_age: int) -> float:
 	if current_age <= 5: return 2.0
@@ -319,6 +343,24 @@ func set_story_term_flag(flag_id: String, value: bool = true) -> void:
 
 func add_stress(amount: int) -> void:
 	stress = int(clamp(stress + amount, 0, 100))
+
+func can_wear_randoseru() -> bool:
+	return can_wear_randoseru_for_age(age)
+
+func is_randoseru_equipped() -> bool:
+	return String(current_appearance.get("bag_type", "none")) == "randoseru"
+
+func set_randoseru_equipped(equipped: bool) -> bool:
+	if equipped and not can_wear_randoseru():
+		return false
+	current_appearance["bag_type"] = "randoseru" if equipped else "none"
+	if equipped:
+		current_appearance["bag_color"] = RANDOSERU_COLOR
+	return true
+
+func _normalize_school_bag_appearance() -> void:
+	if not can_wear_randoseru() and is_randoseru_equipped():
+		current_appearance["bag_type"] = "none"
 
 func append_term_memory_note(note: String) -> void:
 	if note == "":
@@ -441,6 +483,7 @@ func advance_term() -> void:
 		current_appearance["hat_type"] = "school_hat" if age < 12 else "none"
 	queue_event("semester_start") # 学期開始イベントを予約
 	# 男子成長自慢: 中学期に初回のみ
+	_normalize_school_bag_appearance()
 	if age >= 12 and age <= 14 and not has_story_flag("middle_boys_growth_talk_done"):
 		queue_event("middle_boys_growth_talk")
 	# スポーツ勧誘: 高校期 + 十分な身長（185cm超）
@@ -649,6 +692,7 @@ func load_settings():
 		achievements_unlocked = ach_value if ach_value is Array else []
 		for key in current_appearance.keys():
 			current_appearance[key] = config.get_value("Appearance", key, current_appearance[key])
+		_normalize_school_bag_appearance()
 		for key in system_settings.keys():
 			system_settings[key] = config.get_value("System", key, system_settings[key])
 
@@ -792,6 +836,7 @@ func load_slot(slot: int) -> bool:
 	_ensure_growth_history()
 	for key in current_appearance.keys():
 		current_appearance[key] = config.get_value(section, "appearance_" + key, current_appearance[key])
+	_normalize_school_bag_appearance()
 	if config.has_section_key(section, "initial_height"):
 		initial_params = {
 			"height": config.get_value(section, "initial_height", 0.0),

@@ -13,6 +13,9 @@ var bubble_panel: PanelContainer
 var bubble_label: Label
 var daily_guide_panel: PanelContainer
 var daily_guide_label: Label
+var sidebar_overlay: ColorRect
+var _stage_title_time_left: float = 3.0
+var _stage_title_prev_id: String = ""
 
 var minimap_bg: ColorRect
 var minimap_player: ColorRect
@@ -32,6 +35,9 @@ var _nearby_term_hotspot: String = ""
 var _nearby_obs_id: String = ""
 var _nearby_standup: bool = false
 var _nearby_bed: bool = false
+var _nearby_tent_rest: bool = false
+var _sleep_return_stage_id: String = "myroom"
+var _sleep_return_position_cm: float = 260.0
 
 # アクションヒントパネル（Q キーで切り替え）
 var action_hint_panel: PanelContainer
@@ -93,9 +99,9 @@ var _last_soft_limit_notice_key: String = ""
 var _crouch_impossible_notified: bool = false
 var _crouch_impossible_suppress_timer: float = 0.0
 
-const CAMERA_HEIGHT_OFFSET_RATIO := 0.4
-const CAMERA_FOOT_MARGIN_PX := 180.0
+const CAMERA_FOOT_MARGIN_PX := 66.0
 const CAMERA_TOP_PIN_MARGIN_PX := 0.0
+const CAMERA_MIN_FRAME_HEIGHT_CM := 170.0  # 低身長でも下端を固定するための基準高
 
 const GRADE_CHOICE_ORDER = ["continue", "ending"]
 const GRADE_CHOICES: Dictionary = {
@@ -130,6 +136,7 @@ const TERM_HOTSPOT_ORDER = [
 	"gymnasium_basket",
 	"randoseru_farewell",
 	"schoolyard_tease",
+	"park_supplement_vendor",
 	"bookshelf_interact",
 ]
 const TERM_HOTSPOTS: Dictionary = {
@@ -220,7 +227,7 @@ const TERM_HOTSPOTS: Dictionary = {
 		"prompt": "ランドセルを見る",
 		"dialogue_npc": "player",
 		"dialogue_key": "randoseru_farewell",
-		"age_min": 11,
+		"age_min": 12,
 		"story_flag_done": "randoseru_farewell_done",
 		"memory_note": "引き出しの中のランドセルを取り出し、しばらく眺めた。"
 	},
@@ -234,6 +241,18 @@ const TERM_HOTSPOTS: Dictionary = {
 		"stress_delta": 2,
 		"feedback": "視線を感じる場所では少し気を張ってしまう",
 		"memory_note": "校庭の遊具の近くで、男子に声をかけられた。"
+	},
+	"park_supplement_vendor": {
+		"stage_id": "park",
+		"obs_id": "park_supplement_vendor",
+		"prompt": "怪しい販売所をのぞく",
+		"dialogue_npc": "park_vendor",
+		"dialogue_key": "default",
+		"repeatable": true,
+		"repeat_dialogue_npc": "park_vendor",
+		"repeat_dialogue_key": "repeat",
+		"story_flag_done": "park_supplement_vendor_taken",
+		"memory_note": "公園の怪しい無人販売所で、身長が伸びるというサプリを手に入れた。"
 	},
 	"bookshelf_interact": {
 		"stage_id": "myroom",
@@ -397,11 +416,12 @@ func _setup_appearance_debug(vbox: VBoxContainer) -> void:
 	var hair_opt = OptionButton.new()
 	hair_opt.focus_mode = Control.FOCUS_NONE
 	hair_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var hair_values = ["short", "long", "ponytail", "side_tail"]
+	var hair_values = ["short", "long", "ponytail", "side_tail", "short_boy"]
 	hair_opt.add_item("ショート", 0)
 	hair_opt.add_item("ロング", 1)
 	hair_opt.add_item("ポニーテール", 2)
 	hair_opt.add_item("サイドテール", 3)
+	hair_opt.add_item("ショートボーイ", 4)
 	hair_opt.selected = max(0, hair_values.find(Global.current_appearance.get("hair_style", "short")))
 	hair_opt.item_selected.connect(func(idx: int) -> void:
 		Global.current_appearance["hair_style"] = hair_values[idx]
@@ -642,7 +662,7 @@ func _resolve_stage_id(stage_id: String) -> String:
 	return StageBuilder.resolve_stage_id(stage_id, age_value)
 
 func _get_camera_frame_top_cm(stage_id: String, height_cm: float) -> float:
-	var frame_top_cm: float = maxf(height_cm, 1.0)
+	var frame_top_cm: float = maxf(height_cm, CAMERA_MIN_FRAME_HEIGHT_CM)
 	var ceiling_raw = StageBuilder.STAGES.get(stage_id, {}).get("ceiling_height", null)
 	if ceiling_raw != null:
 		frame_top_cm = minf(frame_top_cm, float(ceiling_raw))
@@ -652,7 +672,8 @@ func _get_camera_frame_top_cm(stage_id: String, height_cm: float) -> float:
 func _get_camera_limit_bottom_px(viewport_height_px: float, zoom_y: float, frame_top_cm: float) -> int:
 	var safe_zoom: float = maxf(zoom_y, 0.001)
 	var visible_height_world: float = viewport_height_px / safe_zoom
-	var desired_bottom_y: float = visible_height_world - frame_top_cm * p - CAMERA_TOP_PIN_MARGIN_PX / safe_zoom
+	var baseline_frame_top_cm: float = minf(frame_top_cm, CAMERA_MIN_FRAME_HEIGHT_CM)
+	var desired_bottom_y: float = visible_height_world - baseline_frame_top_cm * p - CAMERA_TOP_PIN_MARGIN_PX / safe_zoom
 	return int(ceilf(maxf(desired_bottom_y, 0.0)))
 
 func _apply_player_camera_offset(cam: Camera2D = null, adjust_zoom: bool = true) -> void:
@@ -682,11 +703,10 @@ func _apply_player_camera_offset(cam: Camera2D = null, adjust_zoom: bool = true)
 		var content_height_world: float = maxf(frame_top_cm * p, 1.0)
 		var new_zoom: float = minf(available_height_px / content_height_world, 1.0)
 		target_cam.zoom = Vector2(new_zoom, new_zoom)
-	var desired_offset_y: float = -height_cm * p * CAMERA_HEIGHT_OFFSET_RATIO
 	var ceiling_offset_y: float = -frame_top_cm * p + (viewport_height_px * 0.5 - CAMERA_TOP_PIN_MARGIN_PX) / float(target_cam.zoom.y)
-	var max_upward_offset_y: float = -(viewport_height_px * 0.5 - CAMERA_FOOT_MARGIN_PX) / float(target_cam.zoom.y)
-	var raw_offset_y: float = minf(desired_offset_y, ceiling_offset_y)
-	target_cam.offset = Vector2(0, maxf(raw_offset_y, max_upward_offset_y))
+	var foot_pinned_offset_y: float = -(viewport_height_px * 0.5 - CAMERA_FOOT_MARGIN_PX) / float(target_cam.zoom.y)
+	# 足元は常に同じスクリーン位置へ固定しつつ、必要なときだけ上端側の制約を優先する。
+	target_cam.offset = Vector2(0, minf(foot_pinned_offset_y, ceiling_offset_y))
 
 func _get_stage_uniform_age(stage_id: String) -> int:
 	var global = get_node_or_null("/root/Global")
@@ -717,14 +737,28 @@ func _build_stage_shoe_overrides(stage_id: String) -> Dictionary:
 		"shoes_color": _get_shoe_color_for_type(shoes_type),
 	}
 
-func _build_stage_uniform_appearance(stage_id: String, hair_style: String, hair_color: String) -> Dictionary:
-	var appearance: Dictionary = Global.get_school_uniform(_get_stage_uniform_age(stage_id)).duplicate(true)
+func _build_stage_appearance(stage_id: String, base_appearance: Dictionary) -> Dictionary:
+	var appearance: Dictionary = base_appearance.duplicate(true)
 	var shoe_overrides: Dictionary = _build_stage_shoe_overrides(stage_id)
-	appearance["hair_style"] = hair_style
-	appearance["hair_color"] = hair_color
 	for key in shoe_overrides.keys():
 		appearance[key] = shoe_overrides[key]
 	return appearance
+
+func _build_stage_uniform_appearance(stage_id: String, hair_style: String, hair_color: String) -> Dictionary:
+	var appearance: Dictionary = Global.get_school_uniform(_get_stage_uniform_age(stage_id)).duplicate(true)
+	appearance["hair_style"] = hair_style
+	appearance["hair_color"] = hair_color
+	return _build_stage_appearance(stage_id, appearance)
+
+func _build_stage_male_student_appearance(stage_id: String, hair_style: String, hair_color: String, tops_color: String = "#f1f3f6", bottoms_color: String = "#2f3a4f") -> Dictionary:
+	return _build_stage_appearance(stage_id, {
+		"hair_style": hair_style,
+		"hair_color": hair_color,
+		"tops_type": "blouse",
+		"tops_color": tops_color,
+		"bottoms_type": "pants",
+		"bottoms_color": bottoms_color,
+	})
 
 func _sync_player_stage_appearance(stage_id: String) -> void:
 	var global = get_node_or_null("/root/Global")
@@ -737,10 +771,99 @@ func _sync_player_stage_appearance(stage_id: String) -> void:
 	if drawer:
 		drawer.queue_redraw()
 
+func _is_stage_object_hidden(node: Node) -> bool:
+	return node.has_meta("hidden_from_interaction") and bool(node.get_meta("hidden_from_interaction"))
+
+func _set_stage_object_hidden(obs_id: String, hidden: bool) -> void:
+	for child in get_children():
+		if not child.has_meta("is_stage_obj") or not child.has_meta("obs_id"):
+			continue
+		if String(child.get_meta("obs_id")) != obs_id:
+			continue
+		child.set_meta("hidden_from_interaction", hidden)
+		if child is CanvasItem:
+			(child as CanvasItem).visible = not hidden
+		if child is CollisionObject2D:
+			for grandchild in child.get_children():
+				if grandchild is CollisionShape2D:
+					(grandchild as CollisionShape2D).disabled = hidden
+
+func _should_offer_randoseru_interaction(global: Node, obs_id: String) -> bool:
+	if obs_id != "randoseru" or global == null:
+		return false
+	if String(global.current_stage_id) != "myroom":
+		return false
+	if global.has_method("is_randoseru_equipped") and global.is_randoseru_equipped():
+		return true
+	return global.has_method("can_wear_randoseru") and global.can_wear_randoseru()
+
+func _get_randoseru_interaction_text(global: Node) -> String:
+	if global and global.has_method("is_randoseru_equipped") and global.is_randoseru_equipped():
+		return "ランドセルを置く"
+	return "ランドセルを背負う"
+
+func _sync_randoseru_stage_object_visibility() -> void:
+	var global = get_node_or_null("/root/Global")
+	if not global or String(global.current_stage_id) != "myroom":
+		return
+	var should_hide: bool = global.has_method("is_randoseru_equipped") and global.is_randoseru_equipped()
+	_set_stage_object_hidden("randoseru", should_hide)
+
+func _trigger_randoseru_interaction() -> void:
+	var global = get_node_or_null("/root/Global")
+	if not _should_offer_randoseru_interaction(global, "randoseru"):
+		return
+	var is_equipped: bool = global.has_method("is_randoseru_equipped") and global.is_randoseru_equipped()
+	if not global.has_method("set_randoseru_equipped") or not global.set_randoseru_equipped(not is_equipped):
+		return
+	_sync_randoseru_stage_object_visibility()
+	var drawer = player.get_node_or_null("CharacterDrawer") if player else null
+	if drawer:
+		drawer.queue_redraw()
+	_nearby_obs_id = ""
+	_show_mood_feedback("ランドセルを置いた" if is_equipped else "ランドセルを背負った", true)
+	global.save_settings()
+
+func _try_show_randoseru_bubble(px: float, player_height_cm: float, hit_dist: float) -> bool:
+	var global = get_node_or_null("/root/Global")
+	if not _should_offer_randoseru_interaction(global, "randoseru"):
+		return false
+	for child in get_children():
+		if not child.has_meta("is_stage_obj") or not child.has_meta("obs_id"):
+			continue
+		if String(child.get_meta("obs_id")) != "randoseru":
+			continue
+		var ox1 := float(child.get_meta("obs_x"))
+		var ox2 := float(child.get_meta("obs_x2"))
+		var dist := 0.0
+		if px < ox1:
+			dist = ox1 - px
+		elif px > ox2:
+			dist = px - ox2
+		if dist >= hit_dist:
+			return false
+		_nearby_npc = null
+		_nearby_transition_door = ""
+		_nearby_height_scale = false
+		_nearby_term_hotspot = ""
+		_nearby_bed = false
+		_nearby_tent_rest = false
+		_nearby_standup = false
+		_nearby_obs_id = "randoseru"
+		bubble_label.text = StageBuilder.get_obstacle_comment("randoseru", player_height_cm, float(child.get_meta("obs_height_cm")))
+		bubble_label.text += "\n[E] %s" % _get_randoseru_interaction_text(global)
+		bubble_panel.show()
+		bubble_panel.position = _get_bubble_screen_pos()
+		return true
+	return false
+
 func _get_stage_lock_message(stage_id: String) -> String:
 	var global = get_node_or_null("/root/Global")
 	if not global:
 		return ""
+	if stage_id == "room" or stage_id == "myroom":
+		if _is_too_big_for_house_rest(global):
+			return "もう家には入れない……。公園の巨大テントなら休めそう。"
 	# 身長が天井より高い屋内ステージには入れない
 	# if StageBuilder.STAGES.has(stage_id) and player:
 	# 	var ceiling_h = StageBuilder.STAGES[stage_id].get("ceiling_height", null)
@@ -942,7 +1065,7 @@ func _get_stress_dialogue_opener(npc_id: String) -> Dictionary:
 func _get_stage_mood_bucket(stage_id: String) -> String:
 	if stage_id == "room" or stage_id == "myroom":
 		return "home"
-	if stage_id in ["station", "platform", "train", "outdoor", "adjacent_town", "gakuenmae", "gakuenmachi"]:
+	if stage_id in ["station", "platform", "train", "outdoor", "park", "adjacent_town", "gakuenmae", "gakuenmachi"]:
 		return "station"
 	if StageBuilder.is_school_stage(stage_id):
 		return "school"
@@ -955,10 +1078,45 @@ func _get_idle_monologue_text(global: Node) -> String:
 	var monologue_set: Dictionary = STRESS_IDLE_MONOLOGUES.get(stage_bucket, STRESS_IDLE_MONOLOGUES.get("default", {}))
 	return String(monologue_set.get(_get_stress_band(int(global.stress)), ""))
 
+func _is_too_big_for_house_rest(global: Node) -> bool:
+	if not global:
+		return false
+	var actual_h: float = float(global.current_params.get("height", 0.0))
+	if actual_h <= 0.0 and player:
+		var measurements_variant: Variant = player.get("m")
+		if measurements_variant is Dictionary:
+			var measurements: Dictionary = measurements_variant
+			actual_h = float(measurements.get("height", 0.0))
+	if actual_h <= 0.0:
+		return false
+	var ceiling_h = StageBuilder.STAGES.get("myroom", {}).get("ceiling_height", null)
+	if ceiling_h == null:
+		return actual_h >= 400.0
+	return actual_h * 0.60 > float(ceiling_h)
+
+func _is_park_tent_rest_available(global: Node) -> bool:
+	return global != null and _is_too_big_for_house_rest(global)
+
+func _is_home_event_fallback_stage(stage_id: String, global: Node) -> bool:
+	return stage_id == "park" and _is_park_tent_rest_available(global)
+
+func _get_park_rest_guidance_text(global: Node) -> String:
+	if not _is_too_big_for_house_rest(global):
+		return ""
+	var stage_id: String = String(global.current_stage_id)
+	if stage_id == "outdoor":
+		return "家では休めない。左へ進んで公園の巨大テントへ向かおう"
+	if stage_id == "park":
+		return "家では休めない。巨大テントまで行けば休める"
+	return ""
+
 func _get_default_action_hint_text() -> String:
 	var global = get_node_or_null("/root/Global")
 	if not global:
 		return "[Q] 設定  [G] 記録  [E] 調べる"
+	var park_rest_hint: String = _get_park_rest_guidance_text(global)
+	if park_rest_hint != "":
+		return park_rest_hint
 	var band: String = _get_stress_band(int(global.stress))
 	var stage_bucket: String = _get_stage_mood_bucket(String(global.current_stage_id))
 	var vball_phase: int = Global.vball_story_phase
@@ -1033,7 +1191,8 @@ func _get_term_hotspot_id_for_obstacle(obs_id: String) -> String:
 		if age_max < 9999 and cur_age > age_max:
 			continue
 		var story_flag_done: String = String(hotspot_data.get("story_flag_done", ""))
-		if story_flag_done != "" and global.has_story_flag(story_flag_done):
+		var is_repeatable: bool = bool(hotspot_data.get("repeatable", false))
+		if story_flag_done != "" and global.has_story_flag(story_flag_done) and not is_repeatable:
 			continue
 		var matched: bool = false
 		# trigger_obs_ids が指定されている場合はそちらを優先（obs_ids は前面描画用途も兼ねるため）
@@ -1190,12 +1349,13 @@ func _trigger_term_hotspot(hotspot_id: String) -> void:
 			global.set_story_flag("bookshelf_checked")
 		_open_achievement_viewer()
 		return
-	# セリフは初回のみ（repeatable なホットスポットの2回目以降はスキップ）
-	if not already_done:
-		_start_dialogue(
-			String(hotspot_data.get("dialogue_npc", "player")),
-			String(hotspot_data.get("dialogue_key", "default"))
-		)
+	var dialogue_npc: String = String(hotspot_data.get("dialogue_npc", "player"))
+	var dialogue_key: String = String(hotspot_data.get("dialogue_key", "default"))
+	if already_done:
+		dialogue_npc = String(hotspot_data.get("repeat_dialogue_npc", dialogue_npc))
+		dialogue_key = String(hotspot_data.get("repeat_dialogue_key", ""))
+	if dialogue_key != "":
+		_start_dialogue(dialogue_npc, dialogue_key)
 	elif pose_name != "" and pose_name != "chair_sit":
 		# ダイアログなしで pose を適用した場合、0.8秒後に自動復帰してフリーズを防ぐ
 		var _saved_pose := _dialogue_restore_pose
@@ -1227,6 +1387,19 @@ func _do_standup() -> void:
 	_sit_front_nodes.clear()
 	_dialogue_restore_pose = ""
 	_nearby_standup = false
+
+func _record_height_measurement_and_show() -> void:
+	var global = get_node_or_null("/root/Global")
+	if not global:
+		return
+	var current_height: float = float(global.current_params.get("height", 0.0))
+	var has_unmeasured: bool = current_height > float(global.recorded_height)
+	if has_unmeasured:
+		var prev_h: float = global.recorded_height
+		global.recorded_height = current_height
+		global.prev_height = prev_h
+		global.record_growth_history("measurement")
+	_show_measurement_result(false, has_unmeasured)
 
 func _start_dialogue(npc_id: String, key: String = "default") -> void:
 	if _in_dialogue or _measurement_showing or _term_choice_showing:
@@ -1470,12 +1643,7 @@ func _end_dialogue() -> void:
 			global.current_stage_id = "infirmary"
 		await _load_stage()
 	elif _current_dialogue_npc == "nurse" and _current_dialogue_key == "measurement_in_progress":
-		if global:
-			var prev_h: float = global.recorded_height
-			global.recorded_height = float(global.current_params["height"])
-			global.prev_height = prev_h
-			global.record_growth_history("measurement")
-		_show_measurement_result(false, true)
+		_record_height_measurement_and_show()
 	elif _current_dialogue_npc == "narrator" and _current_dialogue_key == "refrigerator_milk":
 		if global:
 			global.bonus_growth_cm += 1.0
@@ -1493,6 +1661,11 @@ func _end_dialogue() -> void:
 				global.set_meta("growth_pain_intense", true)
 				global.growth_pain_pending = true
 		# 「捨てる」は何もしない
+	elif _current_dialogue_npc == "park_vendor" and (_current_dialogue_key == "default" or _current_dialogue_key == "repeat"):
+		if global:
+			global.bonus_growth_cm += 10.0
+			global.set_meta("growth_pain_intense", true)
+			global.growth_pain_pending = true
 	elif _current_dialogue_npc == "teacher" and _current_dialogue_key == "semester_start":
 		if global and StageBuilder.is_school_classroom_stage(String(global.current_stage_id)):
 			call_deferred("_start_dialogue", "player", "term_school")
@@ -1661,7 +1834,19 @@ func _interact_with_npc(npc: Node) -> void:
 		else:
 			has_met = npc.get_meta("met_player", false)
 
-		if is_generic:
+		var player_height: float = float(player_m["height"])
+		if npc_id == "park_giant" and player_height > 200.0 and npc_data.has("over_200"):
+			var over_200_flag := "park_giant_over_200_seen"
+			var already_reacted: bool = global != null and global.has_story_flag(over_200_flag)
+			if not already_reacted:
+				key = "over_200"
+				if global:
+					if not global.met_npcs.has(unique_npc_key):
+						global.met_npcs.append(unique_npc_key)
+					global.set_story_flag(over_200_flag)
+				else:
+					npc.set_meta("met_player", true)
+		elif is_generic:
 			if diff >= 35.0:
 				key = "huge"
 			elif diff >= 15.0:
@@ -1776,6 +1961,16 @@ func _update_mood_feedback(delta: float) -> void:
 		return
 	mood_feedback_label.show()
 
+func _update_stage_title(delta: float) -> void:
+	if not stage_title_label:
+		return
+	if _stage_title_time_left <= 0.0:
+		stage_title_label.hide()
+		return
+	_stage_title_time_left = max(0.0, _stage_title_time_left - delta)
+	if _stage_title_time_left <= 0.0:
+		stage_title_label.hide()
+
 func _show_bump_alert(text: String) -> void:
 	if not bump_alert_label:
 		_setup_bump_alert()
@@ -1818,6 +2013,7 @@ func _process(delta: float) -> void:
 	_update_minimap()
 	_update_bump_alert(delta)
 	_update_mood_feedback(delta)
+	_update_stage_title(delta)
 	if action_hint_label and action_hint_panel and action_hint_panel.visible:
 		action_hint_label.text = _get_action_hint_text()
 	_check_edge_transition()
@@ -1869,9 +2065,15 @@ func _check_edge_transition() -> void:
 	var stage_id := String(global.current_stage_id)
 	var player_x_cm: float = player.global_position.x / p
 	if stage_id == "outdoor":
+		if player_x_cm <= 10.0:
+			_enter_edge_transition("park")
 		var stage_w: float = float(StageBuilder.STAGES["outdoor"]["width"])
 		if player_x_cm >= stage_w - 10.0:
 			_enter_edge_transition("adjacent_town")
+	elif stage_id == "park":
+		var stage_w: float = float(StageBuilder.STAGES["park"]["width"])
+		if player_x_cm >= stage_w - 10.0:
+			_enter_edge_transition("outdoor")
 	elif stage_id == "adjacent_town":
 		if player_x_cm <= 10.0:
 			_enter_edge_transition("outdoor")
@@ -1918,6 +2120,8 @@ func _update_bubble():
 	for child in get_children():
 		if child.has_meta("is_stage_obj") and child.has_meta("obs_id") \
 				and String(child.get_meta("obs_id")) == "refrigerator":
+			if _is_stage_object_hidden(child):
+				continue
 			var ox1 := float(child.get_meta("obs_x"))
 			var ox2 := float(child.get_meta("obs_x2"))
 			var dist := 0.0
@@ -1929,6 +2133,7 @@ func _update_bubble():
 				_nearby_height_scale = false
 				_nearby_term_hotspot = ""
 				_nearby_bed = false
+				_nearby_tent_rest = false
 				_nearby_obs_id = "refrigerator"
 				bubble_label.text = StageBuilder.get_obstacle_comment("refrigerator", m["height"], float(child.get_meta("obs_height_cm")))
 				bubble_label.text += "\n[Eキー] 開ける"
@@ -1937,8 +2142,13 @@ func _update_bubble():
 				return
 
 	# ドアは NPC より先にチェック（NPCがいてもドアを優先）
+	if _try_show_randoseru_bubble(px, float(m["height"]), hit_dist):
+		return
+
 	for child in get_children():
 		if child.has_meta("is_stage_obj") and child.has_meta("obs_id") and child.has_meta("obs_x"):
+			if _is_stage_object_hidden(child):
+				continue
 			var obs_id_str := String(child.get_meta("obs_id"))
 			if not obs_id_str.begins_with("door_to_"):
 				continue
@@ -1953,6 +2163,7 @@ func _update_bubble():
 				_nearby_height_scale = false
 				_nearby_term_hotspot = ""
 				_nearby_bed = false
+				_nearby_tent_rest = false
 				_nearby_standup = false
 				_nearby_obs_id = ""
 				if lock_message != "":
@@ -1973,6 +2184,7 @@ func _update_bubble():
 		_nearby_height_scale = false
 		_nearby_term_hotspot = ""
 		_nearby_bed = false
+		_nearby_tent_rest = false
 		bubble_label.text = "[Eキー] 話しかける"
 		bubble_panel.show()
 		bubble_panel.position = _get_bubble_screen_pos()
@@ -1980,6 +2192,8 @@ func _update_bubble():
 
 	for child in get_children():
 		if child.has_meta("is_stage_obj") and child.has_meta("obs_x"):
+			if _is_stage_object_hidden(child):
+				continue
 			# AABBチェックのようなもの。
 			var ox1 = float(child.get_meta("obs_x"))
 			var ox2 = float(child.get_meta("obs_x2"))
@@ -2006,11 +2220,33 @@ func _update_bubble():
 			_nearby_height_scale = false
 			_nearby_term_hotspot = ""
 			_nearby_bed = true
+			_nearby_tent_rest = false
+			_nearby_obs_id = String(obs_id)
+			_nearby_standup = false
 			bubble_label.text += "\n[E] 休む"
+		elif obs_id == "giant_tent" and global and String(global.current_stage_id) == "park" and _is_park_tent_rest_available(global):
+			_nearby_transition_door = ""
+			_nearby_height_scale = false
+			_nearby_term_hotspot = ""
+			_nearby_bed = false
+			_nearby_tent_rest = true
+			_nearby_obs_id = String(obs_id)
+			_nearby_standup = false
+			bubble_label.text += "\n[E] 休む"
+		elif _should_offer_randoseru_interaction(global, String(obs_id)):
+			_nearby_transition_door = ""
+			_nearby_height_scale = false
+			_nearby_term_hotspot = ""
+			_nearby_bed = false
+			_nearby_tent_rest = false
+			_nearby_obs_id = String(obs_id)
+			_nearby_standup = false
+			bubble_label.text += "\n[E] %s" % _get_randoseru_interaction_text(global)
 		elif hotspot_id != "":
 			_nearby_transition_door = ""
 			_nearby_height_scale = false
 			_nearby_bed = false
+			_nearby_tent_rest = false
 			_nearby_obs_id = String(obs_id)
 			# 着席中かつ chair_sit ホットスポットなら「立ち上がる」に切り替え
 			var hotspot_pose: String = String(TERM_HOTSPOTS[hotspot_id].get("pose", ""))
@@ -2029,19 +2265,21 @@ func _update_bubble():
 			_nearby_obs_id = ""
 			_nearby_standup = false
 			_nearby_bed = false
+			_nearby_tent_rest = false
 			if lock_message != "":
 				_nearby_transition_door = ""
 				bubble_label.text = lock_message
 			else:
 				_nearby_transition_door = obs_id
 				bubble_label.text += "\n[Eキーで移動]"
-		elif obs_id == "height_scale":
+		elif obs_id == "height_scale" or obs_id == "giant_height_scale":
 			_nearby_transition_door = ""
 			_nearby_height_scale = true
 			_nearby_term_hotspot = ""
-			_nearby_obs_id = ""
+			_nearby_obs_id = String(obs_id)
 			_nearby_standup = false
 			_nearby_bed = false
+			_nearby_tent_rest = false
 			bubble_label.text += "\n[Eキー] 身長を測る"
 		else:
 			_nearby_transition_door = ""
@@ -2050,6 +2288,7 @@ func _update_bubble():
 			_nearby_obs_id = ""
 			_nearby_standup = false
 			_nearby_bed = false
+			_nearby_tent_rest = false
 
 		bubble_panel.show()
 		bubble_panel.position = _get_bubble_screen_pos()
@@ -2060,6 +2299,7 @@ func _update_bubble():
 		_nearby_obs_id = ""
 		_nearby_standup = false
 		_nearby_bed = false
+		_nearby_tent_rest = false
 		if _in_dialogue or _measurement_showing or _term_choice_showing or _sleep_menu_showing:
 			bubble_panel.hide()
 			return
@@ -2075,6 +2315,13 @@ func _update_bubble():
 func _setup_ui():
 	ui_layer = CanvasLayer.new()
 	
+	# サイドバー表示時の背景暗化オーバーレイ
+	sidebar_overlay = ColorRect.new()
+	sidebar_overlay.color = Color(0, 0, 0, 0.4)
+	sidebar_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	sidebar_overlay.hide()
+	ui_layer.add_child(sidebar_overlay)
+
 	# サイドバー全体を覆うパネル（クラス変数を使用）
 	sidebar = PanelContainer.new()
 	sidebar.set_anchors_preset(Control.PRESET_LEFT_WIDE)
@@ -2184,7 +2431,6 @@ func _setup_ui():
 	daily_guide_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	daily_guide_panel.offset_left = 16
 	daily_guide_panel.offset_top = -58
-	daily_guide_panel.offset_right = 420
 	daily_guide_panel.offset_bottom = -16
 	daily_guide_panel.hide()
 	daily_guide_label = Label.new()
@@ -2196,16 +2442,32 @@ func _setup_ui():
 	daily_guide_panel.add_child(daily_guide_label)
 	ui_layer.add_child(daily_guide_panel)
 
-	# 常時表示する「Q: ステータス設定」ヒントラベル
-	var hint = Label.new()
-	hint.text = "Q: ステータス設定"
-	hint.add_theme_font_size_override("font_size", 14)
-	hint.add_theme_color_override("font_color", Color(1, 1, 1, 0.9))
-	hint.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
-	hint.add_theme_constant_override("outline_size", 4)
-	hint.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	hint.position = Vector2(20, 10)
-	ui_layer.add_child(hint)
+	# 常時表示する「設定」ボタン風パネル
+	var q_panel = PanelContainer.new()
+	var q_style = StyleBoxFlat.new()
+	q_style.bg_color = Color(0, 0, 0, 0.45)
+	q_style.border_width_left = 1
+	q_style.border_width_top = 1
+	q_style.border_width_right = 1
+	q_style.border_width_bottom = 1
+	q_style.border_color = Color(1, 1, 1, 0.25)
+	q_style.corner_radius_top_left = 6
+	q_style.corner_radius_top_right = 6
+	q_style.corner_radius_bottom_right = 6
+	q_style.corner_radius_bottom_left = 6
+	q_style.content_margin_left = 10
+	q_style.content_margin_right = 10
+	q_style.content_margin_top = 5
+	q_style.content_margin_bottom = 5
+	q_panel.add_theme_stylebox_override("panel", q_style)
+	q_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	q_panel.position = Vector2(16, 10)
+	var q_hint = Label.new()
+	q_hint.text = "≡  設定  [Q]"
+	q_hint.add_theme_font_size_override("font_size", 13)
+	q_hint.add_theme_color_override("font_color", Color(1, 1, 1, 0.85))
+	q_panel.add_child(q_hint)
+	ui_layer.add_child(q_panel)
 
 	# ステージ上の自分の位置を示す線（ミニマップ）
 	minimap_bg = ColorRect.new()
@@ -2488,14 +2750,22 @@ func _confirm_sleep_menu_default() -> void:
 		return
 	_on_sleep_menu_selected(_sleep_menu_current_options[0])
 
-func _trigger_bed_interaction() -> void:
+func _trigger_rest_interaction(return_stage_id: String, return_position_cm: float) -> void:
 	var global = get_node_or_null("/root/Global")
 	if not global:
 		return
+	_sleep_return_stage_id = return_stage_id
+	_sleep_return_position_cm = return_position_cm
 	var opts: Array = ["今日を終える"]
 	if int(global.day_in_term) < int(global.term_total_days) - 2:
 		opts.append("学期末まで一気に進める")
 	_show_sleep_menu(opts)
+
+func _trigger_bed_interaction() -> void:
+	_trigger_rest_interaction("myroom", 260.0)
+
+func _trigger_giant_tent_interaction() -> void:
+	_trigger_rest_interaction("park", 1660.0)
 
 func _on_sleep_menu_selected(choice: String) -> void:
 	var global = get_node_or_null("/root/Global")
@@ -2550,17 +2820,26 @@ func _run_sleep_transition() -> void:
 		_in_sleep_dialogue_wait = true
 		_start_dialogue("narrator", pain_key)
 		await _wait_for_dialogue_end()
-	global.current_stage_id = "myroom"
+	var target_stage_id: String = _resolve_stage_id(_sleep_return_stage_id)
+	if not StageBuilder.STAGES.has(target_stage_id):
+		target_stage_id = "myroom"
+	var wake_position_cm: float = _sleep_return_position_cm
+	if StageBuilder.STAGES.has(target_stage_id):
+		var stage_width_cm: float = float(StageBuilder.STAGES[target_stage_id]["width"])
+		wake_position_cm = clamp(wake_position_cm, 50.0, stage_width_cm - 50.0)
+	global.current_stage_id = target_stage_id
 	if player and player.has_method("update_measurements"):
 		player.call("update_measurements")
 	await _load_stage()
 	# 起床後のスポーン位置をベッド(x=30〜230cm)の右隣に設定
 	# 高身長時は天井との衝突で押し出しが発生するため、1フレーム衝突を無効化してから戻す
 	if player:
-		player.position = Vector2(260 * p, 0)
+		player.position = Vector2(wake_position_cm * p, 0)
 		player.collision_shape.disabled = true
 		await get_tree().process_frame
 		player.collision_shape.disabled = false
+	_sleep_return_stage_id = "myroom"
+	_sleep_return_position_cm = 260.0
 	_update_actions_hud()
 	var tw_out = create_tween()
 	tw_out.tween_property(fade, "color:a", 0.0, 0.45)
@@ -2615,10 +2894,12 @@ func _unhandled_input(event: InputEvent) -> void:
 				return
 		if event.keycode == KEY_Q:
 			if sidebar: sidebar.visible = not sidebar.visible
+			if sidebar_overlay: sidebar_overlay.visible = sidebar.visible
 			_toggle_action_hint()
 		elif event.keycode == KEY_G:
 			_toggle_history_panel()
 		elif event.keycode == KEY_E:
+			var _interaction_global = get_node_or_null("/root/Global")
 			if _in_dialogue:
 				if _choice_pending:
 					_activate_selected_choice()
@@ -2630,6 +2911,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				_do_standup()
 			elif _nearby_bed:
 				_trigger_bed_interaction()
+			elif _nearby_tent_rest:
+				_trigger_giant_tent_interaction()
 			elif _nearby_obs_id == "refrigerator":
 				_start_dialogue("narrator", "refrigerator_milk")
 			elif _nearby_obs_id == "vending_machine" or _nearby_obs_id == "station_vending":
@@ -2637,6 +2920,8 @@ func _unhandled_input(event: InputEvent) -> void:
 					_start_dialogue("narrator", "growth_supplement_found")
 				else:
 					_start_dialogue("narrator", "term_station_vending")
+			elif _nearby_obs_id == "randoseru" and _nearby_term_hotspot == "" and _should_offer_randoseru_interaction(_interaction_global, _nearby_obs_id):
+				_trigger_randoseru_interaction()
 			elif _nearby_term_hotspot != "":
 				_trigger_term_hotspot(_nearby_term_hotspot)
 			elif _nearby_transition_door != "":
@@ -2645,10 +2930,10 @@ func _unhandled_input(event: InputEvent) -> void:
 				var _hs_global = get_node_or_null("/root/Global")
 				var _has_unmeasured: bool = _hs_global != null and \
 					float(_hs_global.current_params["height"]) > _hs_global.recorded_height
-				if _has_unmeasured:
+				if _has_unmeasured and _nearby_obs_id == "height_scale":
 					_start_dialogue("nurse", "measurement_in_progress")
 				else:
-					_show_measurement_result()
+					_record_height_measurement_and_show()
 			elif _nearby_npc:
 				_interact_with_npc(_nearby_npc)
 
@@ -2682,16 +2967,17 @@ func _get_action_hint_text() -> String:
 		return "[E] 次へ"
 	if _measurement_showing:
 		return "[E] 閉じる"
-	if _nearby_bed:
+	if _nearby_bed or _nearby_tent_rest:
 		return "[E] 休む"
 	if _measurement_showing:
 		return "[E] 次の学期へ進む"
+	var _hint_global = get_node_or_null("/root/Global")
+	if _nearby_obs_id == "randoseru" and _nearby_term_hotspot == "" and _should_offer_randoseru_interaction(_hint_global, _nearby_obs_id):
+		return "[E] %s" % _get_randoseru_interaction_text(_hint_global)
 	if _nearby_term_hotspot != "":
 		return "[E] %s" % _get_term_hotspot_prompt(_nearby_term_hotspot)
 	if _nearby_transition_door != "":
-		var dest = _nearby_transition_door.substr("door_to_".length())
-		var dest_name = StageBuilder.get_stage_name(dest, Global.age) if StageBuilder.STAGES.has(dest) else dest
-		return "[E] %s へ移動" % dest_name
+		return "[Q] 設定  [G] 記録"  # [E]はバブルに表示済み
 	if _nearby_height_scale:
 		return "[E] 身長を測る"
 	if _nearby_npc:
@@ -2780,6 +3066,10 @@ func _update_ui():
 	var stage_name: String = StageBuilder.get_stage_name(stage_id, global.age if global else 0)
 	if stage_title_label:
 		stage_title_label.text = stage_name
+		if stage_id != _stage_title_prev_id:
+			_stage_title_prev_id = stage_id
+			_stage_title_time_left = 3.0
+			stage_title_label.show()
 	var m = player.get("m")
 	if not m: return
 	
@@ -2838,6 +3128,9 @@ func _update_daily_guide() -> void:
 
 	daily_guide_label.text = hint_text
 	daily_guide_panel.visible = hint_text != ""
+	if hint_text != "":
+		var min_w = daily_guide_panel.get_combined_minimum_size().x
+		daily_guide_panel.offset_right = daily_guide_panel.offset_left + maxf(min_w, 80.0)
 
 func _queue_dialogue_event_once(global: Node, event_id: String, npc_id: String, dialogue_key: String) -> void:
 	if global == null:
@@ -2963,9 +3256,14 @@ func _handle_pending_stage_event(global: Node, stage_id: String, ev: String) -> 
 			_defer_pending_stage_event(global, ev)
 			return false
 	elif ev == "term_end_measurement":
-		if stage_id == "myroom":
+		if stage_id == "myroom" or _is_home_event_fallback_stage(stage_id, global):
 			await get_tree().create_timer(0.4).timeout
+			var randoseru_was_equipped: bool = global.has_method("is_randoseru_equipped") and global.is_randoseru_equipped()
 			global.advance_term()
+			if stage_id == "myroom":
+				var randoseru_is_equipped: bool = global.has_method("is_randoseru_equipped") and global.is_randoseru_equipped()
+				if randoseru_was_equipped != randoseru_is_equipped:
+					_sync_randoseru_stage_object_visibility()
 			if player and player.has_method("update_measurements"):
 				player.call("update_measurements")
 				_apply_player_camera_offset()
@@ -3014,6 +3312,7 @@ func _load_stage():
 	_sync_player_stage_appearance(stage_id)
 
 	StageBuilder.build_stage(stage_id, self, p, global.age if global else 0)
+	_sync_randoseru_stage_object_visibility()
 	_bind_edge_triggers()
 	_spawn_npcs(stage_id)
 	# 天井のあるステージへの遷移直後は詰まり判定を抑制する（awaitより前に設定する必要がある）
@@ -3095,6 +3394,8 @@ func _trigger_too_big_for_house() -> void:
 	if not global:
 		return
 	_edge_transition_running = true
+	_nearby_bed = false
+	_nearby_tent_rest = false
 	# フェードアウト
 	var fade = ColorRect.new()
 	fade.color = Color(0, 0, 0, 0)
@@ -3191,12 +3492,17 @@ func _enter_edge_transition(target_stage: String) -> void:
 	global.current_stage_id = resolved_target
 	global.actions_today += 1
 	_nearby_bed = false
+	_nearby_tent_rest = false
 	_update_actions_hud()
 	_load_stage()
 	if player:
 		var stage_width = float(StageBuilder.STAGES[resolved_target]["width"])
 		var spawn_x = 80.0
-		if from_stage_id == "adjacent_town" and resolved_target == "outdoor":
+		if from_stage_id == "outdoor" and resolved_target == "park":
+			spawn_x = stage_width - 120.0
+		elif from_stage_id == "park" and resolved_target == "outdoor":
+			spawn_x = 80.0
+		elif from_stage_id == "adjacent_town" and resolved_target == "outdoor":
 			spawn_x = stage_width - 80.0
 		elif from_stage_id == "station" and resolved_target == "platform":
 			spawn_x = 270.0  # ホーム左側に到着
@@ -3260,10 +3566,20 @@ func _spawn_npcs(stage_id: String) -> void:
 		"middle": {"height": 149.0, "ratio": 6.4, "legRatio": 44.0, "sex": "female"},
 		"high": {"height": 160.0, "ratio": 6.8, "legRatio": 45.0, "sex": "female"},
 	}
+	var hall_boy_params := {
+		"elementary": {"height": 134.0, "ratio": 6.0, "legRatio": 44.0, "sex": "male"},
+		"middle": {"height": 152.0, "ratio": 6.5, "legRatio": 45.0, "sex": "male"},
+		"high": {"height": 167.0, "ratio": 7.0, "legRatio": 46.0, "sex": "male"},
+	}
 	var classmate_params := {
 		"elementary": {"height": 128.0, "ratio": 5.9, "legRatio": 43.0, "sex": "female"},
 		"middle": {"height": 147.0, "ratio": 6.3, "legRatio": 44.0, "sex": "female"},
 		"high": {"height": 158.0, "ratio": 6.7, "legRatio": 45.0, "sex": "female"},
+	}
+	var classmate_boy_params := {
+		"elementary": {"height": 130.0, "ratio": 5.9, "legRatio": 44.0, "sex": "male"},
+		"middle": {"height": 150.0, "ratio": 6.4, "legRatio": 45.0, "sex": "male"},
+		"high": {"height": 165.0, "ratio": 6.9, "legRatio": 46.0, "sex": "male"},
 	}
 	var stage_suffix := ""
 	if stage_id.ends_with("_elementary"):
@@ -3297,6 +3613,19 @@ func _spawn_npcs(stage_id: String) -> void:
 			"shoes_type": "sneakers",
 			"shoes_color": "#ffffff"
 		}, "", 90.0)
+		_spawn_stage_npc(npc_scene, 840.0, {
+			"height": 166.0,
+			"ratio": 7.0,
+			"legRatio": 45.0,
+			"sex": "male"
+		}, _build_stage_appearance(stage_id, {
+			"hair_style": "short_boy",
+			"hair_color": "#2f241d",
+			"tops_type": "sweater",
+			"tops_color": "#6b7b8f",
+			"bottoms_type": "pants",
+			"bottoms_color": "#394352"
+		}), "", 110.0)
 
 	elif stage_id == "adjacent_town":
 		var middle_uniform: Dictionary = _build_stage_uniform_appearance("school_hallway_middle", "short", "#4f382b")
@@ -3307,6 +3636,27 @@ func _spawn_npcs(stage_id: String) -> void:
 			"legRatio": 44.0,
 			"sex": "female"
 		}, {}, "", 90.0)
+		_spawn_stage_npc(npc_scene, 1180.0, {
+			"height": 154.0,
+			"ratio": 6.5,
+			"legRatio": 45.0,
+			"sex": "male"
+		}, _build_stage_appearance(stage_id, {
+			"hair_style": "short_boy",
+			"hair_color": "#33261f",
+			"tops_type": "blouse",
+			"tops_color": "#edf1f5",
+			"bottoms_type": "pants",
+			"bottoms_color": "#33415a"
+		}), "", 75.0)
+
+	elif stage_id == "park":
+		_spawn_stage_npc(npc_scene, 520.0, {
+			"height": 200.0,
+			"ratio": 7.9,
+			"legRatio": 48.0,
+			"sex": "male"
+		}, {}, "park_giant", 28.0)
 
 	elif stage_id == "platform":
 		_spawn_stage_npc(npc_scene, 760.0, {
@@ -3315,14 +3665,29 @@ func _spawn_npcs(stage_id: String) -> void:
 			"legRatio": 44.0,
 			"sex": "female"
 		}, {}, "", 110.0)
+		_spawn_stage_npc(npc_scene, 1120.0, {
+			"height": 168.0,
+			"ratio": 7.1,
+			"legRatio": 45.0,
+			"sex": "male"
+		}, _build_stage_appearance(stage_id, {
+			"hair_style": "short_boy",
+			"hair_color": "#241b17",
+			"tops_type": "blouse",
+			"tops_color": "#f1f3f5",
+			"bottoms_type": "pants",
+			"bottoms_color": "#2d3544"
+		}), "", 95.0)
 
 	elif stage_id == "gakuenmae":
 		var high_uniform_station: Dictionary = _build_stage_uniform_appearance("school_hallway_high", "short", "#4c3329")
 		_spawn_stage_npc(npc_scene, 820.0, hall_student_params["high"], high_uniform_station, "", 80.0)
+		_spawn_stage_npc(npc_scene, 560.0, hall_boy_params["high"], _build_stage_male_student_appearance(stage_id, "short_boy", "#2c211b", "#eef2f5", "#2d3447"), "", 70.0)
 
 	elif stage_id == "gakuenmachi":
 		var high_uniform_town: Dictionary = _build_stage_uniform_appearance("school_hallway_high", "side_tail", "#413026")
 		_spawn_stage_npc(npc_scene, 760.0, hall_student_params["high"], high_uniform_town, "", 85.0)
+		_spawn_stage_npc(npc_scene, 980.0, hall_boy_params["high"], _build_stage_male_student_appearance(stage_id, "short_boy", "#2a2019", "#f0f3f7", "#30384c"), "", 75.0)
 		_spawn_stage_npc(npc_scene, 1240.0, {
 			"height": 158.0,
 			"ratio": 6.8,
@@ -3347,6 +3712,8 @@ func _spawn_npcs(stage_id: String) -> void:
 
 	elif StageBuilder.is_school_hallway_stage(stage_id):
 		var hall_student_appearance: Dictionary = _build_stage_uniform_appearance(stage_id, "side_tail", "#5b4334")
+		var hall_boy_appearance: Dictionary = _build_stage_male_student_appearance(stage_id, "short_boy", "#2f241d")
+		_spawn_stage_npc(npc_scene, 420.0, hall_boy_params.get(stage_suffix, hall_boy_params["middle"]), hall_boy_appearance, "", 60.0)
 		_spawn_stage_npc(npc_scene, 700.0, hall_student_params.get(stage_suffix, hall_student_params["middle"]), hall_student_appearance, "", 70.0)
 		_spawn_stage_npc(npc_scene, 1180.0 if stage_suffix == "high" else 980.0, {"height": 152.0, "ratio": 6.8, "legRatio": 44.0, "sex": "female"}, {}, "haruka", 55.0)
 		if stage_suffix == "high":
@@ -3354,6 +3721,8 @@ func _spawn_npcs(stage_id: String) -> void:
 
 	elif StageBuilder.is_school_classroom_stage(stage_id):
 		_spawn_stage_npc(npc_scene, 300.0, {"height": 152.0, "ratio": 6.8, "legRatio": 44.0, "sex": "female"}, {}, "haruka", 40.0)
+		var classmate_boy_appearance: Dictionary = _build_stage_male_student_appearance(stage_id, "short_boy", "#31251e", "#eef2f5", "#344059")
+		_spawn_stage_npc(npc_scene, 560.0 if stage_suffix == "high" else 640.0, classmate_boy_params.get(stage_suffix, classmate_boy_params["middle"]), classmate_boy_appearance, "", 30.0)
 		var classmate_appearance: Dictionary = _build_stage_uniform_appearance(stage_id, "short", "#553a2b")
 		_spawn_stage_npc(npc_scene, 1120.0, classmate_params.get(stage_suffix, classmate_params["middle"]), classmate_appearance, "", 30.0)
 		if stage_suffix == "high":
@@ -3365,7 +3734,7 @@ func _spawn_npcs(stage_id: String) -> void:
 			_spawn_stage_npc(npc_scene, 880.0, {
 				"height": 124.0, "ratio": 5.9, "legRatio": 45.0, "sex": "male"
 			}, {
-				"hair_style": "short", "hair_color": "#3a2e28",
+				"hair_style": "short_boy", "hair_color": "#3a2e28",
 				"tops_type": "t_shirt", "tops_color": "#4a7fc1",
 				"bottoms_type": "pants", "bottoms_color": "#444466",
 				"shoes_type": "sneakers", "shoes_color": "#eeeeee"
@@ -3373,7 +3742,7 @@ func _spawn_npcs(stage_id: String) -> void:
 			_spawn_stage_npc(npc_scene, 1080.0, {
 				"height": 127.0, "ratio": 6.0, "legRatio": 45.0, "sex": "male"
 			}, {
-				"hair_style": "short", "hair_color": "#5a4030",
+				"hair_style": "short_boy", "hair_color": "#5a4030",
 				"tops_type": "t_shirt", "tops_color": "#cc5544",
 				"bottoms_type": "pants", "bottoms_color": "#334455",
 				"shoes_type": "sneakers", "shoes_color": "#cccccc"
@@ -3383,14 +3752,38 @@ func _spawn_npcs(stage_id: String) -> void:
 			_spawn_stage_npc(npc_scene, 1500.0, {
 				"height": 155.0, "ratio": 6.5, "legRatio": 45.0, "sex": "male"
 			}, {
-				"hair_style": "short", "hair_color": "#2e2620",
+				"hair_style": "short_boy", "hair_color": "#2e2620",
 				"tops_type": "t_shirt", "tops_color": "#ffffff",
 				"bottoms_type": "pants", "bottoms_color": "#1a1a2e",
 				"shoes_type": "sneakers", "shoes_color": "#dddddd"
 			}, "", 90.0)
+		elif stage_suffix == "high":
+			_spawn_stage_npc(npc_scene, 1320.0, {
+				"height": 168.0, "ratio": 7.0, "legRatio": 46.0, "sex": "male"
+			}, _build_stage_appearance(stage_id, {
+				"hair_style": "short_boy",
+				"hair_color": "#2a211d",
+				"tops_type": "track_suit",
+				"tops_color": "#20384f",
+				"bottoms_type": "pants",
+				"bottoms_color": "#20384f"
+			}), "", 85.0)
 
 	elif StageBuilder.is_gymnasium_stage(stage_id):
 		_spawn_stage_npc(npc_scene, 1200.0, {"height": 168.0, "ratio": 7.1, "legRatio": 45.0, "sex": "female"}, {}, "senior", 90.0)
+		_spawn_stage_npc(npc_scene, 820.0, {
+			"height": 170.0,
+			"ratio": 7.1,
+			"legRatio": 46.0,
+			"sex": "male"
+		}, _build_stage_appearance(stage_id, {
+			"hair_style": "short_boy",
+			"hair_color": "#2b211b",
+			"tops_type": "track_suit",
+			"tops_color": "#1f4663",
+			"bottoms_type": "pants",
+			"bottoms_color": "#1f4663"
+		}), "", 80.0)
 
 	elif StageBuilder.is_infirmary_stage(stage_id):
 		# 保健室の先生（小柄な女性、机の前に立っている）
@@ -3447,6 +3840,7 @@ func _enter_transition_door() -> void:
 
 	_nearby_transition_door = ""
 	_nearby_bed = false
+	_nearby_tent_rest = false
 	_load_stage()
 
 	# 遷移先の「戻り口ドア」の近くにスポーン

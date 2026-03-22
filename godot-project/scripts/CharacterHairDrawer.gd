@@ -21,8 +21,8 @@ static func draw_hair_base_layer(ctx: DrawContext, head_center: Vector2, head_r:
 
 	var dome_offset_y = - hr * 0.1
 	CharacterDrawUtils.draw_ellipse(ctx.canvas, head_center + Vector2(0, dome_offset_y), hair_outer_w, hair_top_h, hair_color)
-	if hair_style == "ponytail" or hair_style == "side_tail":
-		# ポニテ・サイドテール: 下端を横幅いっぱいの半楕円で丸めた形状
+	if hair_style == "ponytail" or hair_style == "side_tail" or hair_style == "short_boy":
+		# ポニテ・サイドテール・ショートボーイ: 下端を横幅いっぱいの半楕円で丸めた形状
 		# 半楕円の最下点 = hair_bottom_y（顎の位置）になる
 		# 【調整用】下端の楕円の縦半径。大きいほど丸みが深くなる。hair_bottom_y から上に食い込む量
 		var eh = hr * 0.5
@@ -96,21 +96,23 @@ static func draw_hair(ctx: DrawContext, head_center: Vector2, head_r: float, hea
 		# 【調整用】サイドヘアの上端位置。マイナスを大きくすると上から始まる
 		var side_top_y = head_center.y - hr * 0.3
 
-		var left_side_pts = PackedVector2Array([
-			Vector2(head_center.x - hair_outer_w, side_top_y),
-			Vector2(head_center.x - side_inner_w, side_top_y),
-			Vector2(head_center.x - side_inner_w, hair_bottom_y),
-			Vector2(head_center.x - hair_outer_w * 0.95, hair_bottom_y)
-		])
-		ctx.canvas.draw_polygon(left_side_pts, PackedColorArray([hair_color]))
+		if hair_style != "short_boy":
+			# short_boy はサイドヘアを描画しない（もみあげが出るため）
+			var left_side_pts = PackedVector2Array([
+				Vector2(head_center.x - hair_outer_w, side_top_y),
+				Vector2(head_center.x - side_inner_w, side_top_y),
+				Vector2(head_center.x - side_inner_w, hair_bottom_y),
+				Vector2(head_center.x - hair_outer_w * 0.95, hair_bottom_y)
+			])
+			ctx.canvas.draw_polygon(left_side_pts, PackedColorArray([hair_color]))
 
-		var right_side_pts = PackedVector2Array([
-			Vector2(head_center.x + side_inner_w, side_top_y),
-			Vector2(head_center.x + hair_outer_w, side_top_y),
-			Vector2(head_center.x + hair_outer_w * 0.95, hair_bottom_y),
-			Vector2(head_center.x + side_inner_w, hair_bottom_y)
-		])
-		ctx.canvas.draw_polygon(right_side_pts, PackedColorArray([hair_color]))
+			var right_side_pts = PackedVector2Array([
+				Vector2(head_center.x + side_inner_w, side_top_y),
+				Vector2(head_center.x + hair_outer_w, side_top_y),
+				Vector2(head_center.x + hair_outer_w * 0.95, hair_bottom_y),
+				Vector2(head_center.x + side_inner_w, hair_bottom_y)
+			])
+			ctx.canvas.draw_polygon(right_side_pts, PackedColorArray([hair_color]))
 
 		# 4. 中間髪（ドームと前髪の間の額を埋めるドーナツ弧）
 		# 【調整用】弧の中心。ドームの中心と合わせるのが基本
@@ -171,6 +173,9 @@ static func draw_hair(ctx: DrawContext, head_center: Vector2, head_r: float, hea
 		elif hair_style == "side_tail":
 			# 【調整用】サイドテールも横で束ねるので短め
 			hair_bottom_len = hr * 0.7
+		elif hair_style == "short_boy":
+			# 【調整用】ショートボーイは後ろが短め
+			hair_bottom_len = hr * 0.6
 
 		# 1. 顔（肌色の円を先に描画する）
 		CharacterDrawUtils.draw_ellipse(ctx.canvas, head_center, hr, hr, skin_color, head_angle)
@@ -193,11 +198,13 @@ static func draw_hair(ctx: DrawContext, head_center: Vector2, head_r: float, hea
 		var steps = 15
 		var min_ang = asin(cut_dist / R)
 
-		if hair_style == "ponytail" or hair_style == "side_tail":
-			# ポニテ・サイドテール: 頭の円弧に沿った後ろ髪（扇形ポリゴン）
+		if hair_style == "ponytail" or hair_style == "side_tail" or hair_style == "short_boy":
+			# ポニテ・サイドテール・ショートボーイ: 頭の円弧に沿った後ろ髪（扇形ポリゴン）
 			# 角度系: 0=真上, PI/2=後頭部（真後ろ）, PI=真下
 			# 【調整用】弧の終端角。PI/2 = 後頭部。より下に伸ばすには値を大きくする（例: PI*0.6）
 			var arc_end_ang = PI *(0.9)
+			if hair_style == "short_boy":
+				arc_end_ang = PI * 0.90
 			var arc_full_steps = 20
 			hair_pts.append(dome_center) # 扇形の中心
 			for i in range(arc_full_steps + 1):
@@ -223,6 +230,15 @@ static func draw_hair(ctx: DrawContext, head_center: Vector2, head_r: float, hea
 			hair_pts.append(sep_pt + hair_down_dir * hair_bottom_len)
 
 		ctx.canvas.draw_polygon(hair_pts, PackedColorArray([hair_color]))
+		if hair_style == "short_boy":
+			var nape_pts = PackedVector2Array([
+				head_center + back_dir * hr * 0.14 + down_dir * hr * 0.38,
+				head_center + back_dir * hr * 0.46 + down_dir * hr * 0.74,
+				head_center + back_dir * hr * 0.22 + down_dir * hr * 0.66,
+				head_center + back_dir * hr * 0.52 + down_dir * hr * 0.96,
+				head_center + back_dir * hr * 0.10 + down_dir * hr * 0.76,
+			])
+			ctx.canvas.draw_polygon(nape_pts, PackedColorArray([hair_color]))
 		_draw_side_tail_profile(ctx, head_center, hr, hair_style, hair_color, back_dir, fwd_dir, up_dir, down_dir)
 
 		# 3. 中間髪（前髪と後ろ髪の間の扇形オブジェクト）
@@ -237,6 +253,8 @@ static func draw_hair(ctx: DrawContext, head_center: Vector2, head_r: float, hea
 		# 【調整用】扇形が前方のどこまで広がるか（-PI/2で額の真ん前）
 		var fan_end_ang = - PI / 4 # 45度が生え際とする
 
+		if hair_style == "short_boy":
+			fan_end_ang = - PI / 3.0
 		for i in range(fan_steps + 1):
 			var t = float(i) / fan_steps
 			var ang = lerp(fan_start_ang, fan_end_ang, t)
@@ -266,6 +284,13 @@ static func draw_hair(ctx: DrawContext, head_center: Vector2, head_r: float, hea
 			# ④ 横髪の顔側ラインと接触する点
 			fan_center.lerp(p1, 0.2)
 		])
+		if hair_style == "short_boy":
+			bangs_pts = PackedVector2Array([
+				p1 + back_dir * hr * 0.03 + up_dir * hr * 0.01,
+				p1 + fwd_dir * hr * 0.18 + down_dir * hr * 0.32,
+				p1.lerp(fan_center, 0.24) + down_dir * hr * 0.10,
+				p1.lerp(fan_center, 0.42) + down_dir * hr * 0.02 + back_dir * hr * 0.02
+			])
 		ctx.canvas.draw_polygon(bangs_pts, PackedColorArray([hair_color]))
 
 		# 5. 耳（前髪より手前に描画することで、中間髪・後ろ髪に隠れずに見える）
@@ -317,6 +342,31 @@ static func draw_bangs_front(ctx: DrawContext, head_center: Vector2, hr: float, 
 	var dome_top_y = head_center.y - hr * 0.1 - hr * 1.08
 	# 【調整用】ドーム上端からのオフセット。小さいほど前髪がドームに密着する
 	var top_y = dome_top_y + hr * 0.25
+
+	if hair_style == "short_boy":
+		# 男の子らしいギザギザ（スパイク）前髪
+		# 【調整用】スパイクの根元ライン（額の上部）
+		var spike_base_y = head_center.y - hr * 0.40
+		# 各スパイクの先端Y座標（根元から下に伸びるほど長い）
+		var t1 = head_center.y - hr * 0.24  # 右端スパイク（短め）
+		var t2 = head_center.y - hr * 0.16  # 中右スパイク（中程度）
+		var t3 = head_center.y - hr * 0.08  # 中央スパイク（最長、眉毛上あたり）
+		var t4 = head_center.y - hr * 0.20  # 左スパイク（中程度）
+		var spiky_pts = PackedVector2Array([
+			Vector2(head_center.x - half_w, top_y),             # 左上
+			Vector2(head_center.x + half_w, top_y),             # 右上
+			Vector2(head_center.x + half_w, spike_base_y),      # 右端（谷）
+			Vector2(head_center.x + half_w * 0.68, t1),         # スパイク1先端
+			Vector2(head_center.x + half_w * 0.40, spike_base_y), # 谷1
+			Vector2(head_center.x + half_w * 0.12, t2),         # スパイク2先端
+			Vector2(head_center.x - half_w * 0.12, spike_base_y), # 谷2
+			Vector2(head_center.x - half_w * 0.38, t3),         # スパイク3先端（最長）
+			Vector2(head_center.x - half_w * 0.62, spike_base_y), # 谷3
+			Vector2(head_center.x - half_w * 0.82, t4),         # スパイク4先端
+			Vector2(head_center.x - half_w, spike_base_y),      # 左端（谷）
+		])
+		ctx.canvas.draw_polygon(spiky_pts, PackedColorArray([hair_color]))
+		return
 
 	# 向かって左側を少し長くし、右側に分け目を入れる形状
 	var pts = PackedVector2Array([
@@ -452,6 +502,11 @@ static func draw_face_overlay_side(ctx: DrawContext, head_center: Vector2, hr: f
 	ctx.canvas.draw_polygon(bangs_pts, PackedColorArray([hair_color]))
 
 static func _get_back_hair_bottom_y(head_center: Vector2, hr: float, hair_style: String) -> float:
+	# 【design task】新しい髪型を追加する場合：
+	# 1. ここに新しい hair_style の場合分岐を追加
+	# 2. head_center.y + hr * (倍率) の形で髪の下端Y位置を返す
+	# 例: if hair_style == "wavy": return head_center.y + hr * 2.0
+
 	if hair_style == "long":
 		return head_center.y + hr * 3.5
 	if hair_style == "ponytail":
@@ -460,6 +515,9 @@ static func _get_back_hair_bottom_y(head_center: Vector2, hr: float, hair_style:
 		return head_center.y + hr * 1.2
 	if hair_style == "side_tail":
 		return head_center.y + hr * 1.2
+	if hair_style == "short_boy":
+		# 【調整用】ショートボーイの後ろ髪の下端。顎より少し上（短め）
+		return head_center.y + hr * 0.9
 	return head_center.y + hr * 1.3
 
 static func _draw_back_tail(ctx: DrawContext, head_center: Vector2, hr: float, hair_style: String, hair_color: Color) -> void:
