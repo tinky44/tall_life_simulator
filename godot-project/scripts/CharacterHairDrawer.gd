@@ -203,6 +203,8 @@ static func draw_hair(ctx: DrawContext, head_center: Vector2, head_r: float, hea
 			# 角度系: 0=真上, PI/2=後頭部（真後ろ）, PI=真下
 			# 【調整用】弧の終端角。PI/2 = 後頭部。より下に伸ばすには値を大きくする（例: PI*0.6）
 			var arc_end_ang = PI *(0.9)
+			if hair_style == "short_boy":
+				arc_end_ang = PI * 0.84
 			var arc_full_steps = 20
 			hair_pts.append(dome_center) # 扇形の中心
 			for i in range(arc_full_steps + 1):
@@ -228,6 +230,15 @@ static func draw_hair(ctx: DrawContext, head_center: Vector2, head_r: float, hea
 			hair_pts.append(sep_pt + hair_down_dir * hair_bottom_len)
 
 		ctx.canvas.draw_polygon(hair_pts, PackedColorArray([hair_color]))
+		if hair_style == "short_boy":
+			var nape_pts = PackedVector2Array([
+				head_center + back_dir * hr * 0.16 + down_dir * hr * 0.42,
+				head_center + back_dir * hr * 0.38 + down_dir * hr * 0.72,
+				head_center + back_dir * hr * 0.18 + down_dir * hr * 0.66,
+				head_center + back_dir * hr * 0.42 + down_dir * hr * 0.88,
+				head_center + back_dir * hr * 0.10 + down_dir * hr * 0.74,
+			])
+			ctx.canvas.draw_polygon(nape_pts, PackedColorArray([hair_color]))
 		_draw_side_tail_profile(ctx, head_center, hr, hair_style, hair_color, back_dir, fwd_dir, up_dir, down_dir)
 
 		# 3. 中間髪（前髪と後ろ髪の間の扇形オブジェクト）
