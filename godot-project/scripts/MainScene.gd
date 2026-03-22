@@ -227,7 +227,7 @@ const TERM_HOTSPOTS: Dictionary = {
 		"prompt": "ランドセルを見る",
 		"dialogue_npc": "player",
 		"dialogue_key": "randoseru_farewell",
-		"age_min": 11,
+		"age_min": 12,
 		"story_flag_done": "randoseru_farewell_done",
 		"memory_note": "引き出しの中のランドセルを取り出し、しばらく眺めた。"
 	},
@@ -755,6 +755,92 @@ func _sync_player_stage_appearance(stage_id: String) -> void:
 	var drawer = player.get_node_or_null("CharacterDrawer") if player else null
 	if drawer:
 		drawer.queue_redraw()
+
+func _is_stage_object_hidden(node: Node) -> bool:
+	return node.has_meta("hidden_from_interaction") and bool(node.get_meta("hidden_from_interaction"))
+
+func _set_stage_object_hidden(obs_id: String, hidden: bool) -> void:
+	for child in get_children():
+		if not child.has_meta("is_stage_obj") or not child.has_meta("obs_id"):
+			continue
+		if String(child.get_meta("obs_id")) != obs_id:
+			continue
+		child.set_meta("hidden_from_interaction", hidden)
+		if child is CanvasItem:
+			(child as CanvasItem).visible = not hidden
+		if child is CollisionObject2D:
+			for grandchild in child.get_children():
+				if grandchild is CollisionShape2D:
+					(grandchild as CollisionShape2D).disabled = hidden
+
+func _should_offer_randoseru_interaction(global: Node, obs_id: String) -> bool:
+	if obs_id != "randoseru" or global == null:
+		return false
+	if String(global.current_stage_id) != "myroom":
+		return false
+	if global.has_method("is_randoseru_equipped") and global.is_randoseru_equipped():
+		return true
+	return global.has_method("can_wear_randoseru") and global.can_wear_randoseru()
+
+func _get_randoseru_interaction_text(global: Node) -> String:
+	if global and global.has_method("is_randoseru_equipped") and global.is_randoseru_equipped():
+		return "ランドセルを置く"
+	return "ランドセルを背負う"
+
+func _sync_randoseru_stage_object_visibility() -> void:
+	var global = get_node_or_null("/root/Global")
+	if not global or String(global.current_stage_id) != "myroom":
+		return
+	var should_hide: bool = global.has_method("is_randoseru_equipped") and global.is_randoseru_equipped()
+	_set_stage_object_hidden("randoseru", should_hide)
+
+func _trigger_randoseru_interaction() -> void:
+	var global = get_node_or_null("/root/Global")
+	if not _should_offer_randoseru_interaction(global, "randoseru"):
+		return
+	var is_equipped: bool = global.has_method("is_randoseru_equipped") and global.is_randoseru_equipped()
+	if not global.has_method("set_randoseru_equipped") or not global.set_randoseru_equipped(not is_equipped):
+		return
+	_sync_randoseru_stage_object_visibility()
+	var drawer = player.get_node_or_null("CharacterDrawer") if player else null
+	if drawer:
+		drawer.queue_redraw()
+	_nearby_obs_id = ""
+	_show_mood_feedback("ランドセルを置いた" if is_equipped else "ランドセルを背負った", true)
+	global.save_settings()
+
+func _try_show_randoseru_bubble(px: float, player_height_cm: float, hit_dist: float) -> bool:
+	var global = get_node_or_null("/root/Global")
+	if not _should_offer_randoseru_interaction(global, "randoseru"):
+		return false
+	for child in get_children():
+		if not child.has_meta("is_stage_obj") or not child.has_meta("obs_id"):
+			continue
+		if String(child.get_meta("obs_id")) != "randoseru":
+			continue
+		var ox1 := float(child.get_meta("obs_x"))
+		var ox2 := float(child.get_meta("obs_x2"))
+		var dist := 0.0
+		if px < ox1:
+			dist = ox1 - px
+		elif px > ox2:
+			dist = px - ox2
+		if dist >= hit_dist:
+			return false
+		_nearby_npc = null
+		_nearby_transition_door = ""
+		_nearby_height_scale = false
+		_nearby_term_hotspot = ""
+		_nearby_bed = false
+		_nearby_tent_rest = false
+		_nearby_standup = false
+		_nearby_obs_id = "randoseru"
+		bubble_label.text = StageBuilder.get_obstacle_comment("randoseru", player_height_cm, float(child.get_meta("obs_height_cm")))
+		bubble_label.text += "\n[E] %s" % _get_randoseru_interaction_text(global)
+		bubble_panel.show()
+		bubble_panel.position = _get_bubble_screen_pos()
+		return true
+	return false
 
 func _get_stage_lock_message(stage_id: String) -> String:
 	var global = get_node_or_null("/root/Global")
@@ -2007,6 +2093,8 @@ func _update_bubble():
 	for child in get_children():
 		if child.has_meta("is_stage_obj") and child.has_meta("obs_id") \
 				and String(child.get_meta("obs_id")) == "refrigerator":
+			if _is_stage_object_hidden(child):
+				continue
 			var ox1 := float(child.get_meta("obs_x"))
 			var ox2 := float(child.get_meta("obs_x2"))
 			var dist := 0.0
@@ -2027,8 +2115,13 @@ func _update_bubble():
 				return
 
 	# ドアは NPC より先にチェック（NPCがいてもドアを優先）
+	if _try_show_randoseru_bubble(px, float(m["height"]), hit_dist):
+		return
+
 	for child in get_children():
 		if child.has_meta("is_stage_obj") and child.has_meta("obs_id") and child.has_meta("obs_x"):
+			if _is_stage_object_hidden(child):
+				continue
 			var obs_id_str := String(child.get_meta("obs_id"))
 			if not obs_id_str.begins_with("door_to_"):
 				continue
@@ -2072,6 +2165,8 @@ func _update_bubble():
 
 	for child in get_children():
 		if child.has_meta("is_stage_obj") and child.has_meta("obs_x"):
+			if _is_stage_object_hidden(child):
+				continue
 			# AABBチェックのようなもの。
 			var ox1 = float(child.get_meta("obs_x"))
 			var ox2 = float(child.get_meta("obs_x2"))
@@ -2111,6 +2206,15 @@ func _update_bubble():
 			_nearby_obs_id = String(obs_id)
 			_nearby_standup = false
 			bubble_label.text += "\n[E] 休む"
+		elif _should_offer_randoseru_interaction(global, String(obs_id)):
+			_nearby_transition_door = ""
+			_nearby_height_scale = false
+			_nearby_term_hotspot = ""
+			_nearby_bed = false
+			_nearby_tent_rest = false
+			_nearby_obs_id = String(obs_id)
+			_nearby_standup = false
+			bubble_label.text += "\n[E] %s" % _get_randoseru_interaction_text(global)
 		elif hotspot_id != "":
 			_nearby_transition_door = ""
 			_nearby_height_scale = false
@@ -2768,6 +2872,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.keycode == KEY_G:
 			_toggle_history_panel()
 		elif event.keycode == KEY_E:
+			var _interaction_global = get_node_or_null("/root/Global")
 			if _in_dialogue:
 				if _choice_pending:
 					_activate_selected_choice()
@@ -2788,6 +2893,8 @@ func _unhandled_input(event: InputEvent) -> void:
 					_start_dialogue("narrator", "growth_supplement_found")
 				else:
 					_start_dialogue("narrator", "term_station_vending")
+			elif _nearby_obs_id == "randoseru" and _nearby_term_hotspot == "" and _should_offer_randoseru_interaction(_interaction_global, _nearby_obs_id):
+				_trigger_randoseru_interaction()
 			elif _nearby_term_hotspot != "":
 				_trigger_term_hotspot(_nearby_term_hotspot)
 			elif _nearby_transition_door != "":
@@ -2837,6 +2944,9 @@ func _get_action_hint_text() -> String:
 		return "[E] 休む"
 	if _measurement_showing:
 		return "[E] 次の学期へ進む"
+	var _hint_global = get_node_or_null("/root/Global")
+	if _nearby_obs_id == "randoseru" and _nearby_term_hotspot == "" and _should_offer_randoseru_interaction(_hint_global, _nearby_obs_id):
+		return "[E] %s" % _get_randoseru_interaction_text(_hint_global)
 	if _nearby_term_hotspot != "":
 		return "[E] %s" % _get_term_hotspot_prompt(_nearby_term_hotspot)
 	if _nearby_transition_door != "":
@@ -3121,7 +3231,12 @@ func _handle_pending_stage_event(global: Node, stage_id: String, ev: String) -> 
 	elif ev == "term_end_measurement":
 		if stage_id == "myroom" or _is_home_event_fallback_stage(stage_id, global):
 			await get_tree().create_timer(0.4).timeout
+			var randoseru_was_equipped: bool = global.has_method("is_randoseru_equipped") and global.is_randoseru_equipped()
 			global.advance_term()
+			if stage_id == "myroom":
+				var randoseru_is_equipped: bool = global.has_method("is_randoseru_equipped") and global.is_randoseru_equipped()
+				if randoseru_was_equipped != randoseru_is_equipped:
+					_sync_randoseru_stage_object_visibility()
 			if player and player.has_method("update_measurements"):
 				player.call("update_measurements")
 				_apply_player_camera_offset()
@@ -3170,6 +3285,7 @@ func _load_stage():
 	_sync_player_stage_appearance(stage_id)
 
 	StageBuilder.build_stage(stage_id, self, p, global.age if global else 0)
+	_sync_randoseru_stage_object_visibility()
 	_bind_edge_triggers()
 	_spawn_npcs(stage_id)
 	# 天井のあるステージへの遷移直後は詰まり判定を抑制する（awaitより前に設定する必要がある）
