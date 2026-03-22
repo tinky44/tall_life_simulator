@@ -1834,7 +1834,19 @@ func _interact_with_npc(npc: Node) -> void:
 		else:
 			has_met = npc.get_meta("met_player", false)
 
-		if is_generic:
+		var player_height: float = float(player_m["height"])
+		if npc_id == "park_giant" and player_height > 200.0 and npc_data.has("over_200"):
+			var over_200_flag := "park_giant_over_200_seen"
+			var already_reacted: bool = global != null and global.has_story_flag(over_200_flag)
+			if not already_reacted:
+				key = "over_200"
+				if global:
+					if not global.met_npcs.has(unique_npc_key):
+						global.met_npcs.append(unique_npc_key)
+					global.set_story_flag(over_200_flag)
+				else:
+					npc.set_meta("met_player", true)
+		elif is_generic:
 			if diff >= 35.0:
 				key = "huge"
 			elif diff >= 15.0:
