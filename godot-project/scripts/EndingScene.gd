@@ -45,11 +45,10 @@ func _ready() -> void:
 	for k in haruka_core_appearance.keys():
 		haruka_appearance_dynamic[k] = haruka_core_appearance[k]
 
-	# [ 左: 初期シルエット(α0.3) ] [ 中: はるか ] [ 右: 現在のキャラ ]
+	# [ 左: 初期主人公(透過なし) ] [ 右: 現在のキャラ ]
 	var slots := [
-		{"params": init_p,                     "appearance": init_ap,                      "x": vp.x * 0.22, "alpha": 0.3},
-		{"params": haruka_params_dynamic,       "appearance": haruka_appearance_dynamic,     "x": vp.x * 0.46, "alpha": 1.0},
-		{"params": global.current_params,       "appearance": global.current_appearance,     "x": vp.x * 0.72, "alpha": 1.0},
+		{"params": init_p,               "appearance": init_ap,                "x": vp.x * 0.33, "alpha": 1.0},
+		{"params": global.current_params, "appearance": global.current_appearance, "x": vp.x * 0.65, "alpha": 1.0},
 	]
 
 	# Global の current_params を一時的に各キャラ用に差し替えて update_measurements() を実行
@@ -58,6 +57,11 @@ func _ready() -> void:
 
 	for slot in slots:
 		_spawn_player(slot, gnd, global)
+
+	# 身長差インジケーター
+	var first_h: float = float(init_p.get("height", 120.0))
+	var last_h: float  = float(global.current_params.get("height", first_h))
+	_draw_comparison_ui(first_h, last_h, slots[0]["x"], slots[1]["x"], gnd, global)
 
 	global.current_params     = saved_params
 	global.current_appearance = saved_appearance
@@ -123,6 +127,53 @@ func _build_growth_text(global: Node) -> void:
 	if not global.visited_stages.is_empty():
 		lines.append("訪れた場所：%d か所" % global.visited_stages.size())
 	_growth_label.text = "\n".join(lines)
+
+
+func _draw_comparison_ui(first_h: float, last_h: float, init_x: float, final_x: float, ground_y: float, global: Node) -> void:
+	var growth := last_h - first_h
+	if growth <= 0.0:
+		return
+
+	var cm_to_px: float = global.CM_TO_PX
+	var first_h_px := first_h * cm_to_px
+	var last_h_px  := last_h  * cm_to_px
+
+	var mid_x    := (init_x + final_x) / 2.0 + 10.0
+	var top_final := ground_y - last_h_px
+	var top_init  := ground_y - first_h_px
+
+	var arrow_color := Color(0.95, 0.25, 0.25, 1.0)
+	var line_w := 2.0
+	var tick_w := 14.0
+
+	# 縦線
+	var v_line := ColorRect.new()
+	v_line.color = arrow_color
+	v_line.position = Vector2(mid_x - line_w / 2.0, top_final)
+	v_line.size = Vector2(line_w, top_init - top_final)
+	add_child(v_line)
+
+	# 上ティック
+	var tick_top := ColorRect.new()
+	tick_top.color = arrow_color
+	tick_top.position = Vector2(mid_x - tick_w / 2.0, top_final - 1.0)
+	tick_top.size = Vector2(tick_w, 3.0)
+	add_child(tick_top)
+
+	# 下ティック
+	var tick_bot := ColorRect.new()
+	tick_bot.color = arrow_color
+	tick_bot.position = Vector2(mid_x - tick_w / 2.0, top_init - 1.0)
+	tick_bot.size = Vector2(tick_w, 3.0)
+	add_child(tick_bot)
+
+	# "+XXcm" ラベル
+	var lbl := Label.new()
+	lbl.text = "+%.0fcm" % growth
+	lbl.add_theme_color_override("font_color", arrow_color)
+	lbl.add_theme_font_size_override("font_size", 22)
+	lbl.position = Vector2(mid_x + 6.0, (top_final + top_init) / 2.0 - 14.0)
+	add_child(lbl)
 
 
 func _on_back_pressed() -> void:

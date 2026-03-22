@@ -10,17 +10,11 @@ static func calculate_pose_data(player: Node, m: Dictionary, p: float) -> Dictio
     var walk_phase = player.walk_phase
     var visual_height_cm = player.visual_height_cm
 
-    # プレイヤー系ノードだけが stress 姿勢を受ける
     var is_leg_pain: bool = false
     var stress_ratio: float = 0.0
     var _g: Node = player.get_node_or_null("/root/Global")
-    var receives_global_stress: bool = false
-    if player.get("receives_global_stress") != null:
-        receives_global_stress = bool(player.get("receives_global_stress"))
     if _g and _g.get("is_leg_pain"):
         is_leg_pain = _g.is_leg_pain
-    if receives_global_stress and _g and _g.get("stress") != null:
-        stress_ratio = clampf(float(_g.stress) / 100.0, 0.0, 1.0)
 
     var leg_l_angle = 0.0
     var leg_r_angle = 0.0
@@ -145,12 +139,6 @@ static func calculate_pose_data(player: Node, m: Dictionary, p: float) -> Dictio
         var base_leg_rad = base_leg * PI / 180.0
         var dy_base = thigh_l * cos(base_leg_rad) + shin_l * cos(base_leg_rad + knee_l)
         y_crotch = -dy_base
-    else:
-        var stress_pose: float = stress_ratio * (0.35 if is_walking else 1.0)
-        waist_angle = 0.20 * stress_pose
-        arm_l_angle += 8.0 * stress_pose
-        arm_r_angle += 8.0 * stress_pose
-
     var cx = 0.0
     var cy = y_crotch
     
