@@ -928,7 +928,7 @@ func _on_grade_choice_selected(choice_id: String) -> void:
 	if choice_id == "continue":
 		return
 
-	get_tree().change_scene_to_file("res://scenes/EndingScene.tscn")
+	get_tree().change_scene_to_file("res://scenes/EndingWalkScene.tscn")
 
 func _get_grade_transition_title(age_value: int) -> String:
 	match age_value:

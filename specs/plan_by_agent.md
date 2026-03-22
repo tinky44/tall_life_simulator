@@ -97,6 +97,48 @@ global.get_school_term_label(age, term) -> String  # "小学1年 1学期"
 
 ---
 
+## エンディング遷移条件
+
+### トリガー：`pending_term_choice` フラグ（Global.gd:495）
+
+`advance_term()` の中で、**学校段階（school_level）が変わった学期**に `true` になる。
+
+| タイミング | 内容 |
+|---|---|
+| 小4進級（age 9） | school_level 0 → 1 |
+| 中学入学（age 12） | school_level 1 → 2 |
+| 高校入学（age 15） | school_level 2 → 3 |
+| 高校卒業（age 18） | school_level 3 → 4 |
+
+### 表示：学年選択パネル（MainScene.gd:639）
+
+`_show_term_choice_panel()` により、学期開始の導入セリフが終わった直後にポーズして選択肢を表示。
+
+```
+[ 1. このまま続ける ]
+[ 2. エンディングへ  ]
+```
+
+### 遷移先（MainScene.gd:931）
+
+「エンディングへ」を選択すると:
+
+```gdscript
+get_tree().change_scene_to_file("res://scenes/EndingWalkScene.tscn")
+```
+
+→ `EndingWalkScene.tscn` へ遷移（`EndingScene.tscn` とは別シーン）
+
+### ⚠️ 設計上の課題（レビュー指摘）
+
+エンディングは卒業時だけでなく**小4・中学入学・高校入学・卒業**の4節目すべてで起動しうる。
+「制服ごとの成長を通しで見せる」企画と矛盾するため、下記を先に決める必要がある。
+
+- **案A：卒業時専用にする** — 小4/中/高進級時は選択肢を出さない or「続ける」のみにする
+- **案B：その時点までの到達段階だけで構成する** — 小4でエンディングを選んだら小学生パートのみ再生
+
+---
+
 ## 実装メモ（未着手）
 
 - `EndingScene.tscn` はすでに存在する → `EndingScene.gd` を拡張する

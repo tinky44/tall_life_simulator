@@ -1,0 +1,562 @@
+extends Node2D
+
+## エンディング歩行アニメーション
+## 主人公とはるかが並んで歩きながら、成長を追体験するスクロールアニメーション。
+## 終了後、既存の EndingScene（身長比較画面）に遷移する。
+
+const NPC_SCENE_PATH = "res://NPC.tscn"
+const HARUKA_BASE_APPEARANCE := {
+	"hair_style": "ponytail", "hair_color": "#111111",
+	"tops_type": "school_uniform", "tops_color": "#ffffff",
+	"bottoms_type": "skirt_short", "bottoms_color": "#333333",
+	"shoes_type": "loafer", "shoes_color": "#4b4b52",
+	"hat_type": "none", "hat_color": "#000000",
+	"bag_type": "none", "bag_color": "#000000",
+}
+
+const LEVEL_LABELS := {
+	0: "小学校 低学年",
+	1: "小学校 高学年",
+	2: "中学校",
+	3: "高校",
+}
+const LEVEL_REPR_AGES := {0: 7, 1: 10, 2: 13, 3: 16}
+
+const WALK_SPEED := 10.0
+const SCROLL_SPEED := 80.0
+const STAGE_DURATION := 5.0
+const SCENERY_STRIP_WIDTH := 2000.0
+const HEIGHT_LERP_SPEED := 8.0
+
+@onready var _fade_overlay: ColorRect = $UI/FadeOverlay
+@onready var _stage_label: Label = $UI/StageLabel
+@onready var _height_label: Label = $UI/HeightLabel
+@onready var _skip_btn: Button = $UI/SkipButton
+
+var _global: Node
+var _protagonist: Node
+var _haruka: Node
+var _bg_strips: Array = []
+var _ground_y: float
+var _vp_size: Vector2
+var _skipped := false
+var _finished := false
+var _walking := false
+var _growth_stages: Array = []
+var _obstacle_node: Node2D = null
+var _obstacle_height_cm := 165.0
+var _ducking := false
+
+
+func _ready() -> void:
+	_global = get_node("/root/Global")
+	_vp_size = get_viewport().get_visible_rect().size
+	_ground_y = _vp_size.y - 60.0
+
+	RenderingServer.set_default_clear_color(Color(0.46, 0.72, 0.98))
+
+	_growth_stages = _build_growth_stages()
+	_build_background()
+	_spawn_characters()
+
+	_skip_btn.pressed.connect(_on_skip_pressed)
+	_fade_overlay.color = Color(0, 0, 0, 1)
+	_stage_label.modulate.a = 0.0
+	_height_label.modulate.a = 0.0
+
+	_run_animation()
+
+
+func _process(delta: float) -> void:
+	if _skipped or _finished or not _walking:
+		return
+
+	for npc in [_protagonist, _haruka]:
+		if npc == null:
+			continue
+		npc.is_walking = true
+		npc.walk_phase += WALK_SPEED * delta
+		# NPC の _physics_process が無効なので手動で visual_height_cm を補間
+		if not _ducking or npc != _protagonist:
+			var target_h := float(npc.m["height"])
+			npc.visual_height_cm = lerp(npc.visual_height_cm, target_h, HEIGHT_LERP_SPEED * delta)
+		npc.character_drawer.queue_redraw()
+
+	# 背景スクロール
+	for strip in _bg_strips:
+		strip.position.x -= SCROLL_SPEED * delta
+	_wrap_background()
+
+	# 障害物との相互作用
+	_update_obstacle(delta)
+
+
+# ─── 成長段階の構築 ─────────────────────────────────────────────
+
+func _build_growth_stages() -> Array:
+	var history: Array = _global.growth_history
+	if history.is_empty():
+		return []
+
+	# growth_history を学校レベル (0-3) でグルーピング、各レベルの最終エントリを採用
+	var last_per_level := {}
+	for entry in history:
+		var age_val: int = int(entry.get("age", 6))
+		var level: int = Global._school_level_from_age(age_val)
+		if level <= 3:
+			last_per_level[level] = entry
+
+	var stages := []
+	for level in [0, 1, 2, 3]:
+		if not last_per_level.has(level):
+			continue
+		var entry: Dictionary = last_per_level[level]
+		var age_val: int = int(entry.get("age", LEVEL_REPR_AGES[level]))
+		var height_val: float = float(entry.get("height", 120.0))
+		var repr_age: int = LEVEL_REPR_AGES[level]
+
+		stages.append({
+			"level": level,
+			"label": LEVEL_LABELS[level],
+			"age": age_val,
+			"height": height_val,
+			"avg_height": float(entry.get("avg_height", _global.get_avg_height(age_val))),
+			"repr_age": repr_age,
+		})
+	return stages
+
+
+# ─── キャラクター生成 ──────────────────────────────────────────
+
+func _spawn_characters() -> void:
+	if _growth_stages.is_empty():
+		return
+
+	var first_stage: Dictionary = _growth_stages[0]
+	var protagonist_x := _vp_size.x * 0.55
+	var haruka_x := _vp_size.x * 0.38
+
+	# 主人公
+	var proto_params := _make_params(first_stage["height"])
+	var proto_appearance := _build_protagonist_appearance(first_stage["repr_age"])
+	_protagonist = _create_npc(proto_params, proto_appearance, protagonist_x)
+
+	# はるか
+	var haruka_h: float = _global.get_avg_height(first_stage["age"])
+	var haruka_params := _make_params_haruka(haruka_h)
+	var haruka_app := _build_haruka_appearance(first_stage["repr_age"])
+	_haruka = _create_npc(haruka_params, haruka_app, haruka_x)
+
+
+func _create_npc(params: Dictionary, app: Dictionary, x_pos: float) -> Node:
+	var npc = load(NPC_SCENE_PATH).instantiate()
+	npc.custom_params = params.duplicate(true)
+	npc.custom_appearance = app.duplicate(true)
+	npc.patrol_range = 0.0
+	npc.dir = 1
+	npc.facing = "side"
+	npc.process_mode = Node.PROCESS_MODE_DISABLED
+	npc.position = Vector2(x_pos, _ground_y)
+	add_child(npc)
+	return npc
+
+
+func _make_params(height_cm: float) -> Dictionary:
+	return {
+		"height": height_cm,
+		"ratio": _calc_ratio(height_cm),
+		"legRatio": 48.0,
+		"sex": _global.current_params.get("sex", "female"),
+	}
+
+
+func _make_params_haruka(height_cm: float) -> Dictionary:
+	return {
+		"height": height_cm,
+		"ratio": _calc_ratio(height_cm),
+		"legRatio": 45.0,
+		"sex": "female",
+	}
+
+
+static func _calc_ratio(h: float) -> float:
+	return clampf(5.5 + (h - 100.0) / 30.0, 5.0, 9.0)
+
+
+func _build_protagonist_appearance(repr_age: int) -> Dictionary:
+	var base: Dictionary
+	if not _global.initial_appearance.is_empty():
+		base = _global.initial_appearance.duplicate(true)
+	else:
+		base = _global.current_appearance.duplicate(true)
+	var uniform: Dictionary = Global.get_school_uniform(repr_age)
+	for k in uniform.keys():
+		base[k] = uniform[k]
+	base["hat_type"] = "school_hat" if repr_age < 12 else "none"
+	base["hat_color"] = "#ffd700"
+	base["bag_type"] = "randoseru" if repr_age <= 11 else "none"
+	if repr_age <= 11:
+		base["bag_color"] = Global.RANDOSERU_COLOR
+	base["shoes_type"] = "loafer"
+	base["shoes_color"] = "#4b4b52"
+	return base
+
+
+func _build_haruka_appearance(repr_age: int) -> Dictionary:
+	var base: Dictionary = HARUKA_BASE_APPEARANCE.duplicate(true)
+	var uniform: Dictionary = Global.get_school_uniform(repr_age)
+	for k in uniform.keys():
+		base[k] = uniform[k]
+	base["hat_type"] = "school_hat" if repr_age < 12 else "none"
+	base["hat_color"] = "#ffd700"
+	base["bag_type"] = "none"
+	base["shoes_type"] = "loafer"
+	base["shoes_color"] = "#4b4b52"
+	return base
+
+
+# ─── 背景 ──────────────────────────────────────────────────────
+
+func _build_background() -> void:
+	# 空（固定、スクロールしない）
+	var sky_upper := ColorRect.new()
+	sky_upper.color = Color(0.42, 0.68, 0.96)
+	sky_upper.position = Vector2(0, 0)
+	sky_upper.size = Vector2(_vp_size.x, _ground_y * 0.6)
+	sky_upper.z_index = -10
+	add_child(sky_upper)
+
+	var sky_lower := ColorRect.new()
+	sky_lower.color = Color(0.62, 0.82, 0.98)
+	sky_lower.position = Vector2(0, _ground_y * 0.6)
+	sky_lower.size = Vector2(_vp_size.x, _ground_y * 0.4)
+	sky_lower.z_index = -10
+	add_child(sky_lower)
+
+	# 地面（固定）
+	var ground := ColorRect.new()
+	ground.color = Color(0.74, 0.67, 0.48)
+	ground.position = Vector2(0, _ground_y)
+	ground.size = Vector2(_vp_size.x, _vp_size.y - _ground_y)
+	ground.z_index = -3
+	add_child(ground)
+
+	# 芝生ライン
+	var grass := ColorRect.new()
+	grass.color = Color(0.45, 0.70, 0.35)
+	grass.position = Vector2(0, _ground_y - 4)
+	grass.size = Vector2(_vp_size.x, 8)
+	grass.z_index = -2
+	add_child(grass)
+
+	# スクロールする景色（2ストリップでシームレスループ）
+	for i in range(2):
+		var strip := _create_scenery_strip()
+		strip.position.x = i * SCENERY_STRIP_WIDTH
+		strip.z_index = -5
+		add_child(strip)
+		_bg_strips.append(strip)
+
+
+func _create_scenery_strip() -> Node2D:
+	var strip := Node2D.new()
+
+	# 木を配置
+	var tree_positions := [100.0, 350.0, 650.0, 950.0, 1250.0, 1550.0, 1800.0]
+	for tx in tree_positions:
+		_add_tree(strip, tx)
+
+	# 柵
+	var fence := ColorRect.new()
+	fence.color = Color(0.72, 0.58, 0.38)
+	fence.position = Vector2(0, _ground_y - 30)
+	fence.size = Vector2(SCENERY_STRIP_WIDTH, 4)
+	strip.add_child(fence)
+
+	# 柵の柱
+	for i in range(int(SCENERY_STRIP_WIDTH / 100)):
+		var post := ColorRect.new()
+		post.color = Color(0.65, 0.52, 0.32)
+		post.position = Vector2(i * 100.0, _ground_y - 50)
+		post.size = Vector2(4, 24)
+		strip.add_child(post)
+
+	# ベンチ
+	_add_bench(strip, 500.0)
+	_add_bench(strip, 1400.0)
+
+	# 花壇
+	_add_flowers(strip, 200.0)
+	_add_flowers(strip, 750.0)
+	_add_flowers(strip, 1100.0)
+	_add_flowers(strip, 1650.0)
+
+	return strip
+
+
+func _add_tree(parent: Node2D, x: float) -> void:
+	var trunk_h := 80.0 + randf_range(-15.0, 15.0)
+	var canopy_r := 35.0 + randf_range(-5.0, 5.0)
+
+	# 幹
+	var trunk := ColorRect.new()
+	trunk.color = Color(0.50, 0.38, 0.22)
+	trunk.position = Vector2(x - 6.0, _ground_y - trunk_h)
+	trunk.size = Vector2(12.0, trunk_h)
+	parent.add_child(trunk)
+
+	# 葉（三角形）
+	var canopy := Polygon2D.new()
+	var green_var := randf_range(-0.05, 0.05)
+	canopy.color = Color(0.35 + green_var, 0.65 + green_var, 0.30 + green_var)
+	canopy.polygon = PackedVector2Array([
+		Vector2(x, _ground_y - trunk_h - canopy_r * 1.5),
+		Vector2(x - canopy_r, _ground_y - trunk_h + 10.0),
+		Vector2(x + canopy_r, _ground_y - trunk_h + 10.0),
+	])
+	parent.add_child(canopy)
+
+
+func _add_bench(parent: Node2D, x: float) -> void:
+	var seat := ColorRect.new()
+	seat.color = Color(0.60, 0.45, 0.28)
+	seat.position = Vector2(x, _ground_y - 22)
+	seat.size = Vector2(50, 6)
+	parent.add_child(seat)
+
+	for leg_x in [x + 5.0, x + 40.0]:
+		var leg := ColorRect.new()
+		leg.color = Color(0.45, 0.45, 0.48)
+		leg.position = Vector2(leg_x, _ground_y - 16)
+		leg.size = Vector2(4, 16)
+		parent.add_child(leg)
+
+
+func _add_flowers(parent: Node2D, x: float) -> void:
+	var colors := [
+		Color(0.95, 0.30, 0.35), Color(0.95, 0.85, 0.25),
+		Color(0.90, 0.50, 0.70), Color(0.65, 0.40, 0.90),
+	]
+	for i in range(5):
+		var flower := ColorRect.new()
+		flower.color = colors[i % colors.size()]
+		flower.position = Vector2(
+			x + i * 10.0 + randf_range(-3.0, 3.0),
+			_ground_y - 10.0 + randf_range(-4.0, 2.0),
+		)
+		flower.size = Vector2(6, 6)
+		parent.add_child(flower)
+
+
+func _wrap_background() -> void:
+	for strip in _bg_strips:
+		if strip.position.x + SCENERY_STRIP_WIDTH < 0:
+			var max_x := -INF
+			for s in _bg_strips:
+				if s != strip and s.position.x > max_x:
+					max_x = s.position.x
+			strip.position.x = max_x + SCENERY_STRIP_WIDTH
+
+
+# ─── 障害物 ────────────────────────────────────────────────────
+
+func _spawn_obstacle() -> void:
+	if _protagonist == null:
+		return
+
+	var proto_height: float = float(_protagonist.m["height"])
+	# 主人公が屈む必要があるが、はるかは通れる高さ
+	_obstacle_height_cm = min(proto_height - 15.0, 175.0)
+	var obstacle_h_px: float = _obstacle_height_cm * _global.CM_TO_PX
+
+	_obstacle_node = Node2D.new()
+	_obstacle_node.position = Vector2(_vp_size.x + 100, 0)
+	_obstacle_node.z_index = -1
+	add_child(_obstacle_node)
+
+	var beam_width := 120.0
+	var beam_thickness := 12.0
+	var post_width := 8.0
+
+	# 上部の梁
+	var beam := ColorRect.new()
+	beam.color = Color(0.55, 0.45, 0.30)
+	beam.position = Vector2(-beam_width / 2.0, _ground_y - obstacle_h_px)
+	beam.size = Vector2(beam_width, beam_thickness)
+	_obstacle_node.add_child(beam)
+
+	# 左の柱
+	var left_post := ColorRect.new()
+	left_post.color = Color(0.50, 0.40, 0.28)
+	left_post.position = Vector2(-beam_width / 2.0, _ground_y - obstacle_h_px)
+	left_post.size = Vector2(post_width, obstacle_h_px)
+	_obstacle_node.add_child(left_post)
+
+	# 右の柱
+	var right_post := ColorRect.new()
+	right_post.color = Color(0.50, 0.40, 0.28)
+	right_post.position = Vector2(beam_width / 2.0 - post_width, _ground_y - obstacle_h_px)
+	right_post.size = Vector2(post_width, obstacle_h_px)
+	_obstacle_node.add_child(right_post)
+
+
+func _update_obstacle(delta: float) -> void:
+	if _obstacle_node == null:
+		return
+
+	_obstacle_node.position.x -= SCROLL_SPEED * delta
+
+	var proto_x: float = _protagonist.position.x
+	var obs_x: float = _obstacle_node.position.x
+	var distance: float = abs(obs_x - proto_x)
+
+	if distance < 80.0 and obs_x < proto_x + 40.0:
+		if not _ducking:
+			_ducking = true
+		_protagonist.visual_height_cm = lerp(
+			_protagonist.visual_height_cm,
+			_obstacle_height_cm - 5.0,
+			10.0 * delta,
+		)
+	elif _ducking:
+		_ducking = false
+
+	if obs_x < -200:
+		_obstacle_node.queue_free()
+		_obstacle_node = null
+
+
+# ─── アニメーション制御 ────────────────────────────────────────
+
+func _run_animation() -> void:
+	if _growth_stages.is_empty():
+		_transition_to_ending()
+		return
+
+	# (1) 暗転からフェードイン
+	var tw_in := create_tween()
+	tw_in.tween_property(_fade_overlay, "color:a", 0.0, 0.8)
+	await tw_in.finished
+	if _skipped:
+		return
+
+	# (2) 歩行開始
+	_walking = true
+
+	# (3) 最初の段階を表示
+	_show_labels(_growth_stages[0])
+
+	await get_tree().create_timer(STAGE_DURATION).timeout
+	if _skipped:
+		return
+
+	# (4) 後続の成長段階
+	for i in range(1, _growth_stages.size()):
+		await _transition_to_stage(_growth_stages[i])
+		if _skipped:
+			return
+		await get_tree().create_timer(STAGE_DURATION).timeout
+		if _skipped:
+			return
+
+	# (5) 障害物演出（主人公が十分に高い場合のみ）
+	if _protagonist != null and float(_protagonist.m["height"]) > 160.0:
+		_spawn_obstacle()
+		await get_tree().create_timer(3.0).timeout
+		if _skipped:
+			return
+
+	# (6) 成長サマリーを表示
+	await _show_growth_summary()
+	if _skipped:
+		return
+
+	await get_tree().create_timer(3.0).timeout
+	if _skipped:
+		return
+
+	# (7) EndingScene へ遷移
+	_transition_to_ending()
+
+
+func _transition_to_stage(stage: Dictionary) -> void:
+	# 白フラッシュ
+	var tw1 := create_tween()
+	tw1.tween_property(_fade_overlay, "color", Color(1, 1, 1, 0.6), 0.15)
+	await tw1.finished
+	if _skipped:
+		return
+
+	# 主人公: 新しい身長・制服に更新
+	var old_vh: float = _protagonist.visual_height_cm
+	_protagonist.custom_params = _make_params(stage["height"]).duplicate(true)
+	_protagonist.custom_appearance = _build_protagonist_appearance(stage["repr_age"]).duplicate(true)
+	_protagonist.update_measurements()
+	_protagonist.visual_height_cm = old_vh  # 滑らかに遷移するため元の値を保持
+
+	# はるか: 年齢相応の平均身長に更新
+	var old_haruka_vh: float = _haruka.visual_height_cm
+	var haruka_h: float = _global.get_avg_height(stage["age"])
+	_haruka.custom_params = _make_params_haruka(haruka_h).duplicate(true)
+	_haruka.custom_appearance = _build_haruka_appearance(stage["repr_age"]).duplicate(true)
+	_haruka.update_measurements()
+	_haruka.visual_height_cm = old_haruka_vh
+
+	# フラッシュ戻し
+	var tw2 := create_tween()
+	tw2.tween_property(_fade_overlay, "color", Color(1, 1, 1, 0), 0.3)
+	await tw2.finished
+
+	_show_labels(stage)
+
+
+func _show_labels(stage: Dictionary) -> void:
+	_stage_label.text = stage["label"]
+	var diff_avg: float = stage["height"] - stage["avg_height"]
+	_height_label.text = "身長 %.0fcm（平均%+.0fcm）" % [stage["height"], diff_avg]
+
+	if _stage_label.modulate.a < 0.5:
+		var tw := create_tween().set_parallel(true)
+		tw.tween_property(_stage_label, "modulate:a", 1.0, 0.4)
+		tw.tween_property(_height_label, "modulate:a", 1.0, 0.4)
+
+
+func _show_growth_summary() -> void:
+	if _growth_stages.is_empty():
+		return
+
+	var first_h: float = _growth_stages[0]["height"]
+	var last_h: float = _growth_stages[-1]["height"]
+	var growth: float = last_h - first_h
+
+	_stage_label.text = ""
+	_height_label.text = "%.0fcm → %.0fcm（+%.0fcm 成長！）" % [first_h, last_h, growth]
+
+	var tw := create_tween().set_parallel(true)
+	tw.tween_property(_stage_label, "modulate:a", 0.0, 0.3)
+	tw.tween_property(_height_label, "modulate:a", 1.0, 0.4)
+	await tw.finished
+
+
+# ─── スキップ・遷移 ────────────────────────────────────────────
+
+func _on_skip_pressed() -> void:
+	if _skipped or _finished:
+		return
+	_skipped = true
+	_walking = false
+	var tw := create_tween()
+	tw.tween_property(_fade_overlay, "color", Color(0, 0, 0, 1), 0.3)
+	await tw.finished
+	get_tree().change_scene_to_file("res://scenes/EndingScene.tscn")
+
+
+func _transition_to_ending() -> void:
+	if _skipped:
+		return
+	_finished = true
+	_walking = false
+	var tw := create_tween()
+	tw.tween_property(_fade_overlay, "color", Color(0, 0, 0, 1), 1.0)
+	await tw.finished
+	get_tree().change_scene_to_file("res://scenes/EndingScene.tscn")
