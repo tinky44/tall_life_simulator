@@ -286,9 +286,10 @@ static func draw_hair(ctx: DrawContext, head_center: Vector2, head_r: float, hea
 		])
 		if hair_style == "short_boy":
 			bangs_pts = PackedVector2Array([
-				p1,
+				p1 + back_dir * hr * 0.03 + up_dir * hr * 0.01,
 				p1 + fwd_dir * hr * 0.18 + down_dir * hr * 0.32,
-				p1.lerp(fan_center, 0.28) + down_dir * hr * 0.06
+				p1.lerp(fan_center, 0.24) + down_dir * hr * 0.10,
+				p1.lerp(fan_center, 0.42) + down_dir * hr * 0.02 + back_dir * hr * 0.02
 			])
 		ctx.canvas.draw_polygon(bangs_pts, PackedColorArray([hair_color]))
 
