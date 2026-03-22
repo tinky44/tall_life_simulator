@@ -204,7 +204,7 @@ static func draw_hair(ctx: DrawContext, head_center: Vector2, head_r: float, hea
 			# 【調整用】弧の終端角。PI/2 = 後頭部。より下に伸ばすには値を大きくする（例: PI*0.6）
 			var arc_end_ang = PI *(0.9)
 			if hair_style == "short_boy":
-				arc_end_ang = PI * 0.84
+				arc_end_ang = PI * 0.88
 			var arc_full_steps = 20
 			hair_pts.append(dome_center) # 扇形の中心
 			for i in range(arc_full_steps + 1):
@@ -232,11 +232,11 @@ static func draw_hair(ctx: DrawContext, head_center: Vector2, head_r: float, hea
 		ctx.canvas.draw_polygon(hair_pts, PackedColorArray([hair_color]))
 		if hair_style == "short_boy":
 			var nape_pts = PackedVector2Array([
-				head_center + back_dir * hr * 0.16 + down_dir * hr * 0.42,
-				head_center + back_dir * hr * 0.38 + down_dir * hr * 0.72,
-				head_center + back_dir * hr * 0.18 + down_dir * hr * 0.66,
-				head_center + back_dir * hr * 0.42 + down_dir * hr * 0.88,
-				head_center + back_dir * hr * 0.10 + down_dir * hr * 0.74,
+				head_center + back_dir * hr * 0.14 + down_dir * hr * 0.38,
+				head_center + back_dir * hr * 0.46 + down_dir * hr * 0.74,
+				head_center + back_dir * hr * 0.22 + down_dir * hr * 0.66,
+				head_center + back_dir * hr * 0.52 + down_dir * hr * 0.96,
+				head_center + back_dir * hr * 0.10 + down_dir * hr * 0.76,
 			])
 			ctx.canvas.draw_polygon(nape_pts, PackedColorArray([hair_color]))
 		_draw_side_tail_profile(ctx, head_center, hr, hair_style, hair_color, back_dir, fwd_dir, up_dir, down_dir)
@@ -253,6 +253,8 @@ static func draw_hair(ctx: DrawContext, head_center: Vector2, head_r: float, hea
 		# 【調整用】扇形が前方のどこまで広がるか（-PI/2で額の真ん前）
 		var fan_end_ang = - PI / 4 # 45度が生え際とする
 
+		if hair_style == "short_boy":
+			fan_end_ang = - PI / 3.0
 		for i in range(fan_steps + 1):
 			var t = float(i) / fan_steps
 			var ang = lerp(fan_start_ang, fan_end_ang, t)
@@ -282,6 +284,12 @@ static func draw_hair(ctx: DrawContext, head_center: Vector2, head_r: float, hea
 			# ④ 横髪の顔側ラインと接触する点
 			fan_center.lerp(p1, 0.2)
 		])
+		if hair_style == "short_boy":
+			bangs_pts = PackedVector2Array([
+				p1,
+				p1 + fwd_dir * hr * 0.18 + down_dir * hr * 0.22,
+				p1.lerp(fan_center, 0.28) + down_dir * hr * 0.06
+			])
 		ctx.canvas.draw_polygon(bangs_pts, PackedColorArray([hair_color]))
 
 		# 5. 耳（前髪より手前に描画することで、中間髪・後ろ髪に隠れずに見える）
