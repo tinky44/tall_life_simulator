@@ -362,7 +362,7 @@ static func build_stage(stage_id: String, parent_node: Node2D, cm_to_px: float, 
     else: # train
         floor_rect.color = Color(0.32, 0.32, 0.35) # 電車の床
     floor_rect.position = Vector2(0, 0)
-    floor_rect.size = Vector2(stage_data["width"] * cm_to_px, 100)
+    floor_rect.size = Vector2(stage_data["width"] * cm_to_px, 1000)
     floor_body.add_child(floor_rect)
     
     parent_node.add_child(floor_body)

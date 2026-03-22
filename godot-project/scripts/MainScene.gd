@@ -102,6 +102,7 @@ var _crouch_impossible_suppress_timer: float = 0.0
 const CAMERA_HEIGHT_OFFSET_RATIO := 0.4
 const CAMERA_FOOT_MARGIN_PX := 180.0
 const CAMERA_TOP_PIN_MARGIN_PX := 0.0
+const CAMERA_MIN_FRAME_HEIGHT_CM := 170.0  # 低身長でも下端を固定するための基準高
 
 const GRADE_CHOICE_ORDER = ["continue", "ending"]
 const GRADE_CHOICES: Dictionary = {
@@ -248,6 +249,9 @@ const TERM_HOTSPOTS: Dictionary = {
 		"prompt": "怪しい販売所をのぞく",
 		"dialogue_npc": "park_vendor",
 		"dialogue_key": "default",
+		"repeatable": true,
+		"repeat_dialogue_npc": "park_vendor",
+		"repeat_dialogue_key": "repeat",
 		"story_flag_done": "park_supplement_vendor_taken",
 		"memory_note": "公園の怪しい無人販売所で、身長が伸びるというサプリを手に入れた。"
 	},
@@ -658,7 +662,7 @@ func _resolve_stage_id(stage_id: String) -> String:
 	return StageBuilder.resolve_stage_id(stage_id, age_value)
 
 func _get_camera_frame_top_cm(stage_id: String, height_cm: float) -> float:
-	var frame_top_cm: float = maxf(height_cm, 1.0)
+	var frame_top_cm: float = maxf(height_cm, CAMERA_MIN_FRAME_HEIGHT_CM)
 	var ceiling_raw = StageBuilder.STAGES.get(stage_id, {}).get("ceiling_height", null)
 	if ceiling_raw != null:
 		frame_top_cm = minf(frame_top_cm, float(ceiling_raw))
@@ -698,7 +702,7 @@ func _apply_player_camera_offset(cam: Camera2D = null, adjust_zoom: bool = true)
 		var content_height_world: float = maxf(frame_top_cm * p, 1.0)
 		var new_zoom: float = minf(available_height_px / content_height_world, 1.0)
 		target_cam.zoom = Vector2(new_zoom, new_zoom)
-	var desired_offset_y: float = -height_cm * p * CAMERA_HEIGHT_OFFSET_RATIO
+	var desired_offset_y: float = -maxf(height_cm, CAMERA_MIN_FRAME_HEIGHT_CM) * p * CAMERA_HEIGHT_OFFSET_RATIO
 	var ceiling_offset_y: float = -frame_top_cm * p + (viewport_height_px * 0.5 - CAMERA_TOP_PIN_MARGIN_PX) / float(target_cam.zoom.y)
 	var max_upward_offset_y: float = -(viewport_height_px * 0.5 - CAMERA_FOOT_MARGIN_PX) / float(target_cam.zoom.y)
 	var raw_offset_y: float = minf(desired_offset_y, ceiling_offset_y)
@@ -1087,7 +1091,8 @@ func _get_term_hotspot_id_for_obstacle(obs_id: String) -> String:
 		if age_max < 9999 and cur_age > age_max:
 			continue
 		var story_flag_done: String = String(hotspot_data.get("story_flag_done", ""))
-		if story_flag_done != "" and global.has_story_flag(story_flag_done):
+		var is_repeatable: bool = bool(hotspot_data.get("repeatable", false))
+		if story_flag_done != "" and global.has_story_flag(story_flag_done) and not is_repeatable:
 			continue
 		var matched: bool = false
 		# trigger_obs_ids が指定されている場合はそちらを優先（obs_ids は前面描画用途も兼ねるため）
@@ -1244,12 +1249,13 @@ func _trigger_term_hotspot(hotspot_id: String) -> void:
 			global.set_story_flag("bookshelf_checked")
 		_open_achievement_viewer()
 		return
-	# セリフは初回のみ（repeatable なホットスポットの2回目以降はスキップ）
-	if not already_done:
-		_start_dialogue(
-			String(hotspot_data.get("dialogue_npc", "player")),
-			String(hotspot_data.get("dialogue_key", "default"))
-		)
+	var dialogue_npc: String = String(hotspot_data.get("dialogue_npc", "player"))
+	var dialogue_key: String = String(hotspot_data.get("dialogue_key", "default"))
+	if already_done:
+		dialogue_npc = String(hotspot_data.get("repeat_dialogue_npc", dialogue_npc))
+		dialogue_key = String(hotspot_data.get("repeat_dialogue_key", ""))
+	if dialogue_key != "":
+		_start_dialogue(dialogue_npc, dialogue_key)
 	elif pose_name != "" and pose_name != "chair_sit":
 		# ダイアログなしで pose を適用した場合、0.8秒後に自動復帰してフリーズを防ぐ
 		var _saved_pose := _dialogue_restore_pose
@@ -1555,7 +1561,7 @@ func _end_dialogue() -> void:
 				global.set_meta("growth_pain_intense", true)
 				global.growth_pain_pending = true
 		# 「捨てる」は何もしない
-	elif _current_dialogue_npc == "park_vendor" and _current_dialogue_key == "default":
+	elif _current_dialogue_npc == "park_vendor" and (_current_dialogue_key == "default" or _current_dialogue_key == "repeat"):
 		if global:
 			global.bonus_growth_cm += 10.0
 			global.set_meta("growth_pain_intense", true)
