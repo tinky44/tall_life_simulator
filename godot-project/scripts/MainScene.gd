@@ -264,6 +264,7 @@ const TERM_HOTSPOTS: Dictionary = {
 }
 
 const STRESS_PREFIX_KEYS: Array[String] = ["default", "tall", "huge", "check"]
+const DIALOGUE_STAGE_SUFFIXES: Array[String] = ["elementary", "middle", "high"]
 const GROWTH_SLEEP_CHANCE := 0.15
 const NPC_STRESS_OPENERS: Dictionary = {
 	"haruka": {
@@ -1029,9 +1030,31 @@ func _get_stress_band(stress_value: int) -> String:
 		return "mid"
 	return "low"
 
+func _get_dialogue_school_suffix() -> String:
+	var global = get_node_or_null("/root/Global")
+	if not global:
+		return ""
+	return Global.get_school_stage_suffix(int(global.age))
+
+func _resolve_dialogue_key(npc_id: String, key: String) -> String:
+	var npc_data: Dictionary = _dialogues.get(npc_id, {})
+	if npc_data.is_empty():
+		return key
+	for suffix in DIALOGUE_STAGE_SUFFIXES:
+		if key.ends_with("_" + suffix):
+			return key
+	var school_suffix := _get_dialogue_school_suffix()
+	if school_suffix == "":
+		return key
+	var variant_key := "%s_%s" % [key, school_suffix]
+	if npc_data.has(variant_key):
+		return variant_key
+	return key
+
 func _build_dialogue_sequence(npc_id: String, key: String) -> Array:
 	var npc_data: Dictionary = _dialogues.get(npc_id, {})
-	var base_lines: Array = npc_data.get(key, []).duplicate(true)
+	var resolved_key := _resolve_dialogue_key(npc_id, key)
+	var base_lines: Array = npc_data.get(resolved_key, []).duplicate(true)
 	if base_lines.is_empty():
 		return []
 	if npc_id == "player":
@@ -1407,7 +1430,8 @@ func _start_dialogue(npc_id: String, key: String = "default") -> void:
 	if not _dialogues.has(npc_id):
 		return
 	var npc_data: Dictionary = _dialogues[npc_id]
-	if not npc_data.has(key):
+	var resolved_key := _resolve_dialogue_key(npc_id, key)
+	if not npc_data.has(key) and not npc_data.has(resolved_key):
 		return
 
 	var global = get_node_or_null("/root/Global")
@@ -1540,9 +1564,9 @@ func _on_choice_selected(choice: Variant) -> void:
 	# 分岐先へ
 	var next_key: String = String(choice_data.get("next", ""))
 	if next_key != "":
-		var npc_data: Dictionary = _dialogues.get(_current_dialogue_npc, {})
-		if npc_data.has(next_key):
-			_dialogue_lines = npc_data[next_key]
+		var next_lines := _build_dialogue_sequence(_current_dialogue_npc, next_key)
+		if not next_lines.is_empty():
+			_dialogue_lines = next_lines
 			_dialogue_index = 0
 			_show_dialogue_line()
 			return

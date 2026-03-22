@@ -4,55 +4,106 @@ const DATA: Dictionary = {
 	"haruka": {
 		"name": "はるか",
 		"first_meet": [
-			{"speaker": "はるか", "text": "おはよう！ …って、あれ？"},
-			{"speaker": "はるか", "text": "ねえ、視点高くない？ また少し伸びた？"},
-			{"speaker": "はるか", "text": "あはは、見上げすぎて首が痛くなっちゃいそう。"},
-			{"speaker": "はるか", "text": "私、はるか。改めてよろしくね。"},
+			{"speaker": "はるか", "text": "おはよ。……あれ？"},
+			{"speaker": "はるか", "text": "今日、なんか目線高くない？ また伸びた？"},
+			{"speaker": "はるか", "text": "わ、見上げすぎて首いたくなりそう。"},
+			{"speaker": "はるか", "text": "私、はるか。これからよろしくね。"},
+		],
+		"first_meet_elementary": [
+			{"speaker": "はるか", "text": "おはよー！ ……あれ？"},
+			{"speaker": "はるか", "text": "きょう、なんか めせん たかくない？ また のびた？"},
+			{"speaker": "はるか", "text": "わっ、みあげすぎたら くび いたくなりそう。"},
+			{"speaker": "はるか", "text": "わたし、はるか！ これから よろしくね。"},
 		],
 		"tall": [
-			{"speaker": "はるか", "text": "あ、ほら。また私を肘置きにしようとしてるでしょ！"},
-			{"speaker": "はるか", "text": "でも、人混みでもすぐ分かるから待ち合わせは楽だよ。"},
+			{"speaker": "はるか", "text": "ちょっと。また私のこと、ひじ置きにしようとしたでしょ。"},
+			{"speaker": "はるか", "text": "でも、人混みでもすぐ見つけられるのは助かるんだよね。"},
+		],
+		"tall_elementary": [
+			{"speaker": "はるか", "text": "あっ、また わたしを ひじおきに しようとしたでしょー。"},
+			{"speaker": "はるか", "text": "でも、ひとごみでも すぐ みつけられるのは べんりだよね。"},
 		],
 		"huge": [
-			{"speaker": "はるか", "text": "（見上げながら）……もう、どこまで伸びるの？"},
-			{"speaker": "はるか", "text": "たまには屈んでよ。内緒話もできないじゃない。"},
+			{"speaker": "はるか", "text": "……ちょっと、また伸びた？"},
+			{"speaker": "はるか", "text": "たまにはしゃがんでよ。内緒話しづらいじゃん。"},
+		],
+		"huge_elementary": [
+			{"speaker": "はるか", "text": "うわ……また のびた？"},
+			{"speaker": "はるか", "text": "ちょっと かがんでよ。ないしょばなし しにくいよ。"},
 		],
 		"height_check_invite": [
-			{"speaker": "はるか", "text": "あ、ちょっと待って！"},
-			{"speaker": "はるか", "text": "なんか……また背、伸びてない？"},
+			{"speaker": "はるか", "text": "あ、ちょっと待って。"},
+			{"speaker": "はるか", "text": "また背、伸びてない？"},
 			{"speaker": "主人公", "text": "……そう、かな。"},
-			{"speaker": "はるか", "text": "絶対伸びてるって！ちょっと保健室行こ、測ってもらおう！"},
+			{"speaker": "はるか", "text": "いや、絶対伸びてるって。保健室行こ、測ってもらおう。"},
+		],
+		"height_check_invite_elementary": [
+			{"speaker": "はるか", "text": "あ、まって まって。"},
+			{"speaker": "はるか", "text": "また せ、のびてない？"},
+			{"speaker": "主人公", "text": "……そうかな。"},
+			{"speaker": "はるか", "text": "ぜったい のびてるって。ほけんしつ いこ、はかってもらおう！"},
 		],
 		"measure_invite": [
 			{"speaker": "はるか", "text": "ねえ……また背、伸びてない？"},
 			{
 				"speaker": "はるか",
-				"text": "保健室、行こうよ。…正直、最近どんな気持ち？",
+				"text": "保健室、行こ。最近さ、自分ではどんな感じ？",
 				"choices": [
-					{"label": "ちょっと嬉しいかも", "next": "measure_invite_proud", "emotion": "confidence"},
-					{"label": "目立つし、恥ずかしい……", "next": "measure_invite_shy", "emotion": "complex"},
-					{"label": "よくわからない", "next": "measure_invite_unsure"},
+					{"label": "ちょっと嬉しい", "next": "measure_invite_proud", "emotion": "confidence"},
+					{"label": "目立つし、やっぱり恥ずかしい……", "next": "measure_invite_shy", "emotion": "complex"},
+					{"label": "まだ、よくわからない", "next": "measure_invite_unsure"},
+				]
+			},
+		],
+		"measure_invite_elementary": [
+			{"speaker": "はるか", "text": "ねえ……また せ、のびてない？"},
+			{
+				"speaker": "はるか",
+				"text": "ほけんしつ いこ。いま、どんなかんじ？",
+				"choices": [
+					{"label": "ちょっとうれしい", "next": "measure_invite_proud", "emotion": "confidence"},
+					{"label": "めだつの、いや……", "next": "measure_invite_shy", "emotion": "complex"},
+					{"label": "よくわかんない", "next": "measure_invite_unsure"},
 				]
 			},
 		],
 		"measure_invite_proud": [
-			{"speaker": "（主人公）", "text": "うん……ちょっと誇らしい気がする。"},
-			{"speaker": "はるか", "text": "そっか！ 似合ってるよ、その高さ。"},
-			{"speaker": "はるか", "text": "じゃあ行こ！ 何センチか確かめてこよう。"},
+			{"speaker": "（主人公）", "text": "うん……ちょっと嬉しい。"},
+			{"speaker": "はるか", "text": "そっか。なんか、その背ちゃんと似合ってるよ。"},
+			{"speaker": "はるか", "text": "じゃ、何センチか見にいこ。"},
+		],
+		"measure_invite_proud_elementary": [
+			{"speaker": "（主人公）", "text": "うん……ちょっとうれしい。"},
+			{"speaker": "はるか", "text": "そっか！ そのせ、なんか かっこいいよ。"},
+			{"speaker": "はるか", "text": "じゃ、はかりに いこ！"},
 		],
 		"measure_invite_shy": [
-			{"speaker": "（主人公）", "text": "……正直、目立って恥ずかしくて。"},
-			{"speaker": "はるか", "text": "気にしないって！ みんな気にしてないよ。"},
-			{"speaker": "はるか", "text": "ほら、一緒に行けば怖くない。行こっ。"},
+			{"speaker": "（主人公）", "text": "……目立つし、やっぱり恥ずかしい。"},
+			{"speaker": "はるか", "text": "そっか。でも、一人で気にしてるより測ってすっきりしよ。"},
+			{"speaker": "はるか", "text": "私も一緒に行くからさ。"},
+		],
+		"measure_invite_shy_elementary": [
+			{"speaker": "（主人公）", "text": "……みんなに みられそうで、やだ。"},
+			{"speaker": "はるか", "text": "そっか。でも、ひとりで もやもやするより はかってみよ。"},
+			{"speaker": "はるか", "text": "わたしも いっしょに いくから。"},
 		],
 		"measure_invite_unsure": [
-			{"speaker": "（主人公）", "text": "……うーん、自分でもよくわかんない。"},
-			{"speaker": "はるか", "text": "そっか。まず測ってみようよ。"},
-			{"speaker": "はるか", "text": "数字で見ると、なんか気持ちが整理できるかもよ？"},
+			{"speaker": "（主人公）", "text": "……自分でも、まだよくわかんない。"},
+			{"speaker": "はるか", "text": "そっか。じゃあ、まず測ってみよ。"},
+			{"speaker": "はるか", "text": "数字で見ると、少し気持ちが追いつくかも。"},
+		],
+		"measure_invite_unsure_elementary": [
+			{"speaker": "（主人公）", "text": "……じぶんでも、よくわかんない。"},
+			{"speaker": "はるか", "text": "そっか。じゃあ、まず はかってみよ。"},
+			{"speaker": "はるか", "text": "すうじでみると、ちょっと わかるかも。"},
 		],
 		"measure_after": [
 			{"speaker": "はるか", "text": "……やっぱり伸びてる。"},
-			{"speaker": "はるか", "text": "次の学期も、また測ろうね。抜け駆け禁止だよ！"},
+			{"speaker": "はるか", "text": "次の学期もまた測ろう。今度も一緒ね。"},
+		],
+		"measure_after_elementary": [
+			{"speaker": "はるか", "text": "……やっぱり のびてる！"},
+			{"speaker": "はるか", "text": "つぎも いっしょに はかろうね。ぬけがけ なし！"},
 		],
 		"vball_join_cheer": [
 			{"speaker": "はるか", "text": "バレー部！？ えっ、すごい決断だね。"},
@@ -82,7 +133,7 @@ const DATA: Dictionary = {
 			{"speaker": "はるか", "text": "バレー部、また続けるの？ 応援してるよ。"},
 		],
 		"term_school_haruka_support": [
-			{"speaker": "はるか", "text": "教室、今日はどう？ なんとなく、ずっと肩に力が入ってるように見えた。"},
+			{"speaker": "はるか", "text": "今日の教室、しんどくない？ なんかずっと肩に力入ってるっぽい。"},
 			{
 				"speaker": "主人公",
 				"text": "……どう返そう。",
@@ -92,13 +143,32 @@ const DATA: Dictionary = {
 				]
 			},
 		],
+		"term_school_haruka_support_elementary": [
+			{"speaker": "はるか", "text": "きょうの きょうしつ、だいじょうぶ？ なんか ずっと かたに ちから はいってるよ。"},
+			{
+				"speaker": "主人公",
+				"text": "……どう こたえよう。",
+				"choices": [
+					{"label": "ほんとのことを はなす", "next": "term_school_haruka_open", "emotion": "confidence", "action": "stress:-5,note:はるかに教室で感じるしんどさを打ち明けられた。"},
+					{"label": "だいじょうぶって いう", "next": "term_school_haruka_hold", "emotion": "complex", "action": "stress:+2,note:はるかの前でも大丈夫なふりをしてしまった。"},
+				]
+			},
+		],
 		"term_school_haruka_open": [
-			{"speaker": "主人公", "text": "視線が集まるたびに、ちゃんと立ってるだけで疲れる時がある。"},
-			{"speaker": "はるか", "text": "そっか。じゃあ、しんどい日は一人で抱えないで。席でも保健室でも、私も隣にいるから。"},
+			{"speaker": "主人公", "text": "視線が集まるたび、ただ立ってるだけで疲れる時がある。"},
+			{"speaker": "はるか", "text": "そっか。つらい日はさ、席でも保健室でも一緒に行こ。"},
+		],
+		"term_school_haruka_open_elementary": [
+			{"speaker": "主人公", "text": "みんなに みられると、ただ たってるだけで つかれちゃう。"},
+			{"speaker": "はるか", "text": "そっか。つらい日は せきでも ほけんしつでも、わたしと いっしょに いこ。"},
 		],
 		"term_school_haruka_hold": [
 			{"speaker": "主人公", "text": "……平気。たぶん、いつものことだから。"},
-			{"speaker": "はるか", "text": "そっか。でも、無理して笑ってる時って分かるよ。つらくなったら、あとででも声かけて。"},
+			{"speaker": "はるか", "text": "そっか。でも、無理してる時ってけっこう分かるよ。あとででも声かけて。"},
+		],
+		"term_school_haruka_hold_elementary": [
+			{"speaker": "主人公", "text": "……へいき。たぶん、だいじょうぶ。"},
+			{"speaker": "はるか", "text": "そっか。でも、むりしてるとき わかるよ。あとででも こえかけてね。"},
 		],
 	},
 	"senior": {
@@ -191,21 +261,37 @@ const DATA: Dictionary = {
 	"teacher": {
 		"semester_start": [
 			{"speaker": "田中先生", "text": "起立、礼。着席。"},
-			{"speaker": "田中先生", "text": "新学期が始まりましたね。今学期もよろしく。"},
-			{"speaker": "田中先生", "text": "……あなた、また背が伸びたんですか。後ろの席に座ってください"},
+			{"speaker": "田中先生", "text": "新学期ですね。今学期もよろしくお願いします。"},
+			{"speaker": "田中先生", "text": "……また背が伸びましたね。今日は後ろの席にしましょうか。"},
+		],
+		"semester_start_elementary": [
+			{"speaker": "田中先生", "text": "きりつ、れい。すわりましょう。"},
+			{"speaker": "田中先生", "text": "しんがっきが はじまりました。こんがっきも よろしくね。"},
+			{"speaker": "田中先生", "text": "……また せが のびたね。きょうは うしろの せきに すわってみようか。"},
 		],
 	},
 	"nurse": {
 		"default": [
-			{"speaker": "保健の先生", "text": "あら、今日も身長を測りに来たの？"},
-			{"speaker": "保健の先生", "text": "身長計の前に立って。はい、背筋をまっすぐ。"},
+			{"speaker": "保健の先生", "text": "今日は身長、測りに来たの？"},
+			{"speaker": "保健の先生", "text": "じゃあ身長計の前へ。背すじを伸ばしてね。"},
+		],
+		"default_elementary": [
+			{"speaker": "保健の先生", "text": "きょうも せを はかりに きたの？"},
+			{"speaker": "保健の先生", "text": "じゃあ ここに たってね。せすじ ぴん、だよ。"},
 		],
 		"measurement_notice": [
-			{"speaker": "保健の先生", "text": "そろそろ身体測定の時期ね。保健室においで。"},
+			{"speaker": "保健の先生", "text": "そろそろ身体測定の時期ね。時間がある時に保健室へおいで。"},
+		],
+		"measurement_notice_elementary": [
+			{"speaker": "保健の先生", "text": "もうすぐ しんたいそくてい だよ。あとで ほけんしつに おいで。"},
 		],
 		"measurement_in_progress": [
-			{"speaker": "養護教諭", "text": "はいはい、じゃあ靴を脱いで身長計に乗って。"},
-			{"speaker": "養護教諭", "text": "……はい、そこで止まって。"},
+			{"speaker": "保健の先生", "text": "靴を脱いで、身長計に乗ってね。"},
+			{"speaker": "保健の先生", "text": "はい、そのまま止まって。"},
+		],
+		"measurement_in_progress_elementary": [
+			{"speaker": "保健の先生", "text": "くつ ぬいで、この うえに のってね。"},
+			{"speaker": "保健の先生", "text": "うん、そのまま じっとしてて。"},
 		],
 	},
 	"player": {
@@ -229,6 +315,10 @@ const DATA: Dictionary = {
 		"new_semester": [
 			{"speaker": "（主人公）", "text": "新学期か……。"},
 			{"speaker": "（主人公）", "text": "また少し背が伸びた気がする。今学期も色々あるんだろうな。"},
+		],
+		"new_semester_elementary": [
+			{"speaker": "（主人公）", "text": "しんがっきだ。"},
+			{"speaker": "（主人公）", "text": "また ちょっと せが のびたかも。こんがっきは どうなるかな。"},
 		],
 		"term_home_mirror": [
 			{"speaker": "（主人公）", "text": "洗面台の鏡に、自分の姿がすっぽり映る。"},
@@ -264,36 +354,78 @@ const DATA: Dictionary = {
 				]
 			},
 		],
+		"term_school_elementary": [
+			{"speaker": "（主人公）", "text": "また いちばん うしろの せきだ。みんなの めが、ちょっと きになる。"},
+			{
+				"speaker": "（主人公）",
+				"text": "こんがっき、どうしよう？",
+				"choices": [
+					{"label": "めだっても がんばって いく", "next": "term_school_brave", "emotion": "confidence", "action": "stress:-4"},
+					{"label": "やっぱり ちょっと しんどい", "next": "term_school_tired", "emotion": "complex", "action": "stress:+4"},
+				]
+			},
+		],
 		"term_school_brave": [
 			{"speaker": "（主人公）", "text": "……大丈夫。見られても、ちゃんとここにいる。"},
 			{"speaker": "はるか", "text": "うん、その調子。今学期も一緒にやっていこう。"},
+		],
+		"term_school_brave_elementary": [
+			{"speaker": "（主人公）", "text": "……だいじょうぶ。みられても、ちゃんと いく。"},
+			{"speaker": "はるか", "text": "うん、そのちょうし。こんがっきも いっしょだよ。"},
 		],
 		"term_school_tired": [
 			{"speaker": "（主人公）", "text": "……ちょっと、息が詰まる。"},
 			{"speaker": "はるか", "text": "無理しすぎないでね。しんどい時は、ちゃんと休もう。"},
 		],
+		"term_school_tired_elementary": [
+			{"speaker": "（主人公）", "text": "……ちょっと、むねが きゅってする。"},
+			{"speaker": "はるか", "text": "むりしすぎないでね。しんどかったら、ちゃんと やすも。"},
+		],
 		"term_school_seat": [
 			{"speaker": "（主人公）", "text": "自分の席に座る。机の高さは昔のままなのに、見える景色だけが少し変わっている。"},
 			{"speaker": "（主人公）", "text": "落ち着かない。でも、ここで過ごすしかないんだ。"},
 		],
+		"term_school_seat_elementary": [
+			{"speaker": "（主人公）", "text": "じぶんの せきに すわる。つくえは おなじなのに、みえる けしきだけ ちょっと ちがう。"},
+			{"speaker": "（主人公）", "text": "なんだか そわそわする。でも、ここで すごすんだ。"},
+		],
 		"term_school_infirmary": [
-			{"speaker": "保健の先生", "text": "顔色、少し固いわね。座って、ゆっくり話してみる？"},
+			{"speaker": "保健の先生", "text": "なんだか顔がこわばってるね。座って、少し話してみる？"},
 			{
 				"speaker": "（主人公）",
-				"text": "……どうしよう。正直に話した方がいいのかな。",
+				"text": "……どうしよう。ちゃんと話したほうがいいかな。",
 				"choices": [
 					{"label": "しんどさを正直に話す", "next": "term_school_infirmary_open", "emotion": "confidence", "action": "stress:-6,note:保健室でしんどさを正直に話せた。"},
 					{"label": "平気だと言って戻る", "next": "term_school_infirmary_hold", "emotion": "complex", "action": "stress:+3,note:保健室でも平気なふりをしてしまった。"},
 				]
 			},
 		],
+		"term_school_infirmary_elementary": [
+			{"speaker": "保健の先生", "text": "なんだか かおが かたいね。すわって、ちょっと はなしてみる？"},
+			{
+				"speaker": "（主人公）",
+				"text": "……どうしよう。ほんとのこと、いったほうが いいかな。",
+				"choices": [
+					{"label": "しんどいって はなす", "next": "term_school_infirmary_open", "emotion": "confidence", "action": "stress:-6,note:保健室でしんどさを正直に話せた。"},
+					{"label": "だいじょうぶって いう", "next": "term_school_infirmary_hold", "emotion": "complex", "action": "stress:+3,note:保健室でも平気なふりをしてしまった。"},
+				]
+			},
+		],
 		"term_school_infirmary_open": [
-			{"speaker": "（主人公）", "text": "……最近、視線が気になって、ずっと肩に力が入ってるんです。"},
-			{"speaker": "保健の先生", "text": "言えてえらいわ。無理を続けるより、ちゃんと気づける方がずっと大事よ。"},
+			{"speaker": "（主人公）", "text": "……最近、視線が気になって、ずっと肩に力が入るんです。"},
+			{"speaker": "保健の先生", "text": "話してくれてえらいよ。無理を続けるより、自分で気づけたことのほうがずっと大事。"},
+		],
+		"term_school_infirmary_open_elementary": [
+			{"speaker": "（主人公）", "text": "……みんなの めが きになって、ずっと かたに ちからが はいっちゃう。"},
+			{"speaker": "保健の先生", "text": "はなしてくれて えらいね。むりして がまんするより、きづけたことが だいじだよ。"},
 		],
 		"term_school_infirmary_hold": [
-			{"speaker": "（主人公）", "text": "……大丈夫です。ちょっと疲れてるだけ。"},
-			{"speaker": "保健の先生", "text": "そう。でも、つらくなったらまた来ていいからね。"},
+			{"speaker": "（主人公）", "text": "……大丈夫です。ちょっと疲れてるだけです。"},
+			{"speaker": "保健の先生", "text": "そっか。つらくなったら、また来ていいからね。"},
+		],
+		"term_school_infirmary_hold_elementary": [
+			{"speaker": "（主人公）", "text": "……だいじょうぶ。ちょっと つかれただけ。"},
+			{"speaker": "保健の先生", "text": "そっか。つらくなったら また きていいからね。"},
 		],
 		"term_station_bench": [
 			{"speaker": "（主人公）", "text": "ベンチに腰を下ろす。人の流れを見ていると、自分だけ少し別の速さで立っていた気がした。"},
@@ -308,8 +440,8 @@ const DATA: Dictionary = {
 			{"speaker": "（主人公）", "text": "届くかどうかより、体が素直に上へ伸びる感覚のほうがうれしかった。"},
 		],
 		"entrance_elementary": [
-			{"speaker": "（主人公）", "text": "今日は小学校の入学式だ。"},
-			{"speaker": "（主人公）", "text": "ランドセルが重たい……でも、楽しみだな。"},
+			{"speaker": "（主人公）", "text": "きょうは しょうがっこうの にゅうがくしきだ。"},
+			{"speaker": "（主人公）", "text": "ランドセル、ちょっと おもい。でも たのしみ。"},
 		],
 		"entrance_middle": [
 			{"speaker": "（主人公）", "text": "今日は中学校の入学式だ。"},
@@ -382,11 +514,11 @@ const DATA: Dictionary = {
 			{"speaker": "はるか", "text": "行ってみたら？ 見るだけでもいいと思うよ。"},
 		],
 		"elem_tease": [
-			{"speaker": "男子", "text": "ねえ、なんか背高くない？"},
-			{"speaker": "男子", "text": "どんだけ伸びるんだよ。"},
+			{"speaker": "男子", "text": "ねえ、せ たかくない？"},
+			{"speaker": "男子", "text": "また のびたの？ すごくね？"},
 			{
 				"speaker": "（主人公）",
-				"text": "（どう返せばいい？）",
+				"text": "（なんて いえば いいんだろう）",
 				"choices": [
 					{"label": "気にしないでいる", "next": "elem_tease_ignore", "emotion": "confidence", "action": "stress:-2"},
 					{"label": "少しだけへこむ", "next": "elem_tease_sad", "emotion": "complex", "action": "stress:+3"},
@@ -394,12 +526,12 @@ const DATA: Dictionary = {
 			},
 		],
 		"elem_tease_ignore": [
-			{"speaker": "（主人公）", "text": "……気にしない。でも、少しだけ耳に残る。"},
-			{"speaker": "はるか", "text": "気にすることないよ。あの子たち、別に悪気はないと思うし。"},
+			{"speaker": "（主人公）", "text": "……きにしない。けど、なんか ずっと のこる。"},
+			{"speaker": "はるか", "text": "だいじょうぶだよ。あの子たち、いじわるっていうより びっくりしただけだよ。"},
 		],
 		"elem_tease_sad": [
-			{"speaker": "（主人公）", "text": "（ちょっと、痛かった。）"},
-			{"speaker": "はるか", "text": "ねえ、気にしなくていいよ。そのままのあなたで全然いい。"},
+			{"speaker": "（主人公）", "text": "（ちょっと かなしかった。）"},
+			{"speaker": "はるか", "text": "へんじゃないよ。気にしなくて いいからね。"},
 		],
 	},
 	"park_giant": {
@@ -470,6 +602,10 @@ const DATA: Dictionary = {
 		"npc_talk_tall": [
 			{"speaker": "同級生", "text": "ねえ、バスケ部入ってるの？ 絶対向いてるって！"},
 			{"speaker": "同級生", "text": "その高さ、ちょっと羨ましいな。"},
+		],
+		"npc_talk_tall_elementary": [
+			{"speaker": "同級生", "text": "ねえねえ、バスケ やってるの？"},
+			{"speaker": "同級生", "text": "その せ、ちょっとうらやましいな。"},
 		],
 		"npc_talk_huge": [
 			{"speaker": "通行人", "text": "……モデルさんですか？"},
