@@ -737,14 +737,28 @@ func _build_stage_shoe_overrides(stage_id: String) -> Dictionary:
 		"shoes_color": _get_shoe_color_for_type(shoes_type),
 	}
 
-func _build_stage_uniform_appearance(stage_id: String, hair_style: String, hair_color: String) -> Dictionary:
-	var appearance: Dictionary = Global.get_school_uniform(_get_stage_uniform_age(stage_id)).duplicate(true)
+func _build_stage_appearance(stage_id: String, base_appearance: Dictionary) -> Dictionary:
+	var appearance: Dictionary = base_appearance.duplicate(true)
 	var shoe_overrides: Dictionary = _build_stage_shoe_overrides(stage_id)
-	appearance["hair_style"] = hair_style
-	appearance["hair_color"] = hair_color
 	for key in shoe_overrides.keys():
 		appearance[key] = shoe_overrides[key]
 	return appearance
+
+func _build_stage_uniform_appearance(stage_id: String, hair_style: String, hair_color: String) -> Dictionary:
+	var appearance: Dictionary = Global.get_school_uniform(_get_stage_uniform_age(stage_id)).duplicate(true)
+	appearance["hair_style"] = hair_style
+	appearance["hair_color"] = hair_color
+	return _build_stage_appearance(stage_id, appearance)
+
+func _build_stage_male_student_appearance(stage_id: String, hair_style: String, hair_color: String, tops_color: String = "#f1f3f6", bottoms_color: String = "#2f3a4f") -> Dictionary:
+	return _build_stage_appearance(stage_id, {
+		"hair_style": hair_style,
+		"hair_color": hair_color,
+		"tops_type": "blouse",
+		"tops_color": tops_color,
+		"bottoms_type": "pants",
+		"bottoms_color": bottoms_color,
+	})
 
 func _sync_player_stage_appearance(stage_id: String) -> void:
 	var global = get_node_or_null("/root/Global")
@@ -3540,10 +3554,20 @@ func _spawn_npcs(stage_id: String) -> void:
 		"middle": {"height": 149.0, "ratio": 6.4, "legRatio": 44.0, "sex": "female"},
 		"high": {"height": 160.0, "ratio": 6.8, "legRatio": 45.0, "sex": "female"},
 	}
+	var hall_boy_params := {
+		"elementary": {"height": 134.0, "ratio": 6.0, "legRatio": 44.0, "sex": "male"},
+		"middle": {"height": 152.0, "ratio": 6.5, "legRatio": 45.0, "sex": "male"},
+		"high": {"height": 167.0, "ratio": 7.0, "legRatio": 46.0, "sex": "male"},
+	}
 	var classmate_params := {
 		"elementary": {"height": 128.0, "ratio": 5.9, "legRatio": 43.0, "sex": "female"},
 		"middle": {"height": 147.0, "ratio": 6.3, "legRatio": 44.0, "sex": "female"},
 		"high": {"height": 158.0, "ratio": 6.7, "legRatio": 45.0, "sex": "female"},
+	}
+	var classmate_boy_params := {
+		"elementary": {"height": 130.0, "ratio": 5.9, "legRatio": 44.0, "sex": "male"},
+		"middle": {"height": 150.0, "ratio": 6.4, "legRatio": 45.0, "sex": "male"},
+		"high": {"height": 165.0, "ratio": 6.9, "legRatio": 46.0, "sex": "male"},
 	}
 	var stage_suffix := ""
 	if stage_id.ends_with("_elementary"):
@@ -3577,6 +3601,19 @@ func _spawn_npcs(stage_id: String) -> void:
 			"shoes_type": "sneakers",
 			"shoes_color": "#ffffff"
 		}, "", 90.0)
+		_spawn_stage_npc(npc_scene, 840.0, {
+			"height": 166.0,
+			"ratio": 7.0,
+			"legRatio": 45.0,
+			"sex": "male"
+		}, _build_stage_appearance(stage_id, {
+			"hair_style": "short_boy",
+			"hair_color": "#2f241d",
+			"tops_type": "sweater",
+			"tops_color": "#6b7b8f",
+			"bottoms_type": "pants",
+			"bottoms_color": "#394352"
+		}), "", 110.0)
 
 	elif stage_id == "adjacent_town":
 		var middle_uniform: Dictionary = _build_stage_uniform_appearance("school_hallway_middle", "short", "#4f382b")
@@ -3587,6 +3624,19 @@ func _spawn_npcs(stage_id: String) -> void:
 			"legRatio": 44.0,
 			"sex": "female"
 		}, {}, "", 90.0)
+		_spawn_stage_npc(npc_scene, 1180.0, {
+			"height": 154.0,
+			"ratio": 6.5,
+			"legRatio": 45.0,
+			"sex": "male"
+		}, _build_stage_appearance(stage_id, {
+			"hair_style": "short_boy",
+			"hair_color": "#33261f",
+			"tops_type": "blouse",
+			"tops_color": "#edf1f5",
+			"bottoms_type": "pants",
+			"bottoms_color": "#33415a"
+		}), "", 75.0)
 
 	elif stage_id == "park":
 		_spawn_stage_npc(npc_scene, 520.0, {
@@ -3603,14 +3653,29 @@ func _spawn_npcs(stage_id: String) -> void:
 			"legRatio": 44.0,
 			"sex": "female"
 		}, {}, "", 110.0)
+		_spawn_stage_npc(npc_scene, 1120.0, {
+			"height": 168.0,
+			"ratio": 7.1,
+			"legRatio": 45.0,
+			"sex": "male"
+		}, _build_stage_appearance(stage_id, {
+			"hair_style": "short_boy",
+			"hair_color": "#241b17",
+			"tops_type": "blouse",
+			"tops_color": "#f1f3f5",
+			"bottoms_type": "pants",
+			"bottoms_color": "#2d3544"
+		}), "", 95.0)
 
 	elif stage_id == "gakuenmae":
 		var high_uniform_station: Dictionary = _build_stage_uniform_appearance("school_hallway_high", "short", "#4c3329")
 		_spawn_stage_npc(npc_scene, 820.0, hall_student_params["high"], high_uniform_station, "", 80.0)
+		_spawn_stage_npc(npc_scene, 560.0, hall_boy_params["high"], _build_stage_male_student_appearance(stage_id, "short_boy", "#2c211b", "#eef2f5", "#2d3447"), "", 70.0)
 
 	elif stage_id == "gakuenmachi":
 		var high_uniform_town: Dictionary = _build_stage_uniform_appearance("school_hallway_high", "side_tail", "#413026")
 		_spawn_stage_npc(npc_scene, 760.0, hall_student_params["high"], high_uniform_town, "", 85.0)
+		_spawn_stage_npc(npc_scene, 980.0, hall_boy_params["high"], _build_stage_male_student_appearance(stage_id, "short_boy", "#2a2019", "#f0f3f7", "#30384c"), "", 75.0)
 		_spawn_stage_npc(npc_scene, 1240.0, {
 			"height": 158.0,
 			"ratio": 6.8,
@@ -3635,6 +3700,8 @@ func _spawn_npcs(stage_id: String) -> void:
 
 	elif StageBuilder.is_school_hallway_stage(stage_id):
 		var hall_student_appearance: Dictionary = _build_stage_uniform_appearance(stage_id, "side_tail", "#5b4334")
+		var hall_boy_appearance: Dictionary = _build_stage_male_student_appearance(stage_id, "short_boy", "#2f241d")
+		_spawn_stage_npc(npc_scene, 420.0, hall_boy_params.get(stage_suffix, hall_boy_params["middle"]), hall_boy_appearance, "", 60.0)
 		_spawn_stage_npc(npc_scene, 700.0, hall_student_params.get(stage_suffix, hall_student_params["middle"]), hall_student_appearance, "", 70.0)
 		_spawn_stage_npc(npc_scene, 1180.0 if stage_suffix == "high" else 980.0, {"height": 152.0, "ratio": 6.8, "legRatio": 44.0, "sex": "female"}, {}, "haruka", 55.0)
 		if stage_suffix == "high":
@@ -3642,6 +3709,8 @@ func _spawn_npcs(stage_id: String) -> void:
 
 	elif StageBuilder.is_school_classroom_stage(stage_id):
 		_spawn_stage_npc(npc_scene, 300.0, {"height": 152.0, "ratio": 6.8, "legRatio": 44.0, "sex": "female"}, {}, "haruka", 40.0)
+		var classmate_boy_appearance: Dictionary = _build_stage_male_student_appearance(stage_id, "short_boy", "#31251e", "#eef2f5", "#344059")
+		_spawn_stage_npc(npc_scene, 560.0 if stage_suffix == "high" else 640.0, classmate_boy_params.get(stage_suffix, classmate_boy_params["middle"]), classmate_boy_appearance, "", 30.0)
 		var classmate_appearance: Dictionary = _build_stage_uniform_appearance(stage_id, "short", "#553a2b")
 		_spawn_stage_npc(npc_scene, 1120.0, classmate_params.get(stage_suffix, classmate_params["middle"]), classmate_appearance, "", 30.0)
 		if stage_suffix == "high":
@@ -3653,7 +3722,7 @@ func _spawn_npcs(stage_id: String) -> void:
 			_spawn_stage_npc(npc_scene, 880.0, {
 				"height": 124.0, "ratio": 5.9, "legRatio": 45.0, "sex": "male"
 			}, {
-				"hair_style": "short", "hair_color": "#3a2e28",
+				"hair_style": "short_boy", "hair_color": "#3a2e28",
 				"tops_type": "t_shirt", "tops_color": "#4a7fc1",
 				"bottoms_type": "pants", "bottoms_color": "#444466",
 				"shoes_type": "sneakers", "shoes_color": "#eeeeee"
@@ -3661,7 +3730,7 @@ func _spawn_npcs(stage_id: String) -> void:
 			_spawn_stage_npc(npc_scene, 1080.0, {
 				"height": 127.0, "ratio": 6.0, "legRatio": 45.0, "sex": "male"
 			}, {
-				"hair_style": "short", "hair_color": "#5a4030",
+				"hair_style": "short_boy", "hair_color": "#5a4030",
 				"tops_type": "t_shirt", "tops_color": "#cc5544",
 				"bottoms_type": "pants", "bottoms_color": "#334455",
 				"shoes_type": "sneakers", "shoes_color": "#cccccc"
@@ -3671,14 +3740,38 @@ func _spawn_npcs(stage_id: String) -> void:
 			_spawn_stage_npc(npc_scene, 1500.0, {
 				"height": 155.0, "ratio": 6.5, "legRatio": 45.0, "sex": "male"
 			}, {
-				"hair_style": "short", "hair_color": "#2e2620",
+				"hair_style": "short_boy", "hair_color": "#2e2620",
 				"tops_type": "t_shirt", "tops_color": "#ffffff",
 				"bottoms_type": "pants", "bottoms_color": "#1a1a2e",
 				"shoes_type": "sneakers", "shoes_color": "#dddddd"
 			}, "", 90.0)
+		elif stage_suffix == "high":
+			_spawn_stage_npc(npc_scene, 1320.0, {
+				"height": 168.0, "ratio": 7.0, "legRatio": 46.0, "sex": "male"
+			}, _build_stage_appearance(stage_id, {
+				"hair_style": "short_boy",
+				"hair_color": "#2a211d",
+				"tops_type": "track_suit",
+				"tops_color": "#20384f",
+				"bottoms_type": "pants",
+				"bottoms_color": "#20384f"
+			}), "", 85.0)
 
 	elif StageBuilder.is_gymnasium_stage(stage_id):
 		_spawn_stage_npc(npc_scene, 1200.0, {"height": 168.0, "ratio": 7.1, "legRatio": 45.0, "sex": "female"}, {}, "senior", 90.0)
+		_spawn_stage_npc(npc_scene, 820.0, {
+			"height": 170.0,
+			"ratio": 7.1,
+			"legRatio": 46.0,
+			"sex": "male"
+		}, _build_stage_appearance(stage_id, {
+			"hair_style": "short_boy",
+			"hair_color": "#2b211b",
+			"tops_type": "track_suit",
+			"tops_color": "#1f4663",
+			"bottoms_type": "pants",
+			"bottoms_color": "#1f4663"
+		}), "", 80.0)
 
 	elif StageBuilder.is_infirmary_stage(stage_id):
 		# 保健室の先生（小柄な女性、机の前に立っている）

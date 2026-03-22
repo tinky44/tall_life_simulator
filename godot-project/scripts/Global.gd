@@ -143,7 +143,7 @@ var core_npcs: Dictionary = {
 			"でかい遊具を見ると、なんだか安心するんだよな。"
 		],
 		"appearance": {
-			"hair_style": "short",
+			"hair_style": "short_boy",
 			"hair_color": "#2a1d14",
 			"tops_type": "t_shirt",
 			"tops_color": "#4a6f66",
