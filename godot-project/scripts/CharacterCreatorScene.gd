@@ -401,6 +401,21 @@ func _on_next_pressed() -> void:
         global.record_growth_history("start")
         global.visited_stages = {}
         global.experienced_events = []
+        # ストーリー・イベント系のリセット
+        global.story_flags = {}
+        global.story_phases = {}
+        global.story_term_flags = {}
+        global.met_npcs = []
+        global.vball_story_phase = 0
+        global.vball_joined = false
+        global.is_leg_pain = false
+        global.pending_events = []
+        global.haruka_following = false
+        global.haruka_invited_this_term = false
+        global.senior_gym_invited = false
+        global.active_companion_id = ""
+        # 実績のリセット
+        global.achievements_unlocked = []
         global.lock_initial_state()
         global.recorded_height = global.current_params["height"]
         global.height_measured_this_term = false
