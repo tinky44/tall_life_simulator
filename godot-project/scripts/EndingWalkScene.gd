@@ -16,10 +16,11 @@ const HARUKA_BASE_APPEARANCE := {
 
 const WALK_SPEED := 10.0
 const SCROLL_SPEED := 80.0
-const STAGE_DURATION_MIN := 2.0  # ステージ数が多い場合の最短表示秒数
-const STAGE_DURATION_MAX := 4.0  # ステージ数が少ない場合の最長表示秒数
+const STAGE_DURATION_MIN := 2.0
+const STAGE_DURATION_MAX := 3.5
 const SCENERY_STRIP_WIDTH := 2000.0
 const HEIGHT_LERP_SPEED := 8.0
+enum ObstacleType { LOW_CEILING = 0, CHIN_BAR = 1, LOW_GATE = 2 }
 
 @onready var _fade_overlay: ColorRect = $UI/FadeOverlay
 @onready var _stage_label: Label = $UI/StageLabel
@@ -36,9 +37,9 @@ var _skipped := false
 var _finished := false
 var _walking := false
 var _growth_stages: Array = []
-var _obstacle_node: Node2D = null
-var _obstacle_height_cm := 165.0
+var _obstacles: Array = []       # 複数障害物管理 [{node, type, height_cm, passed}]
 var _ducking := false
+var _jumping := false
 var _initial_protagonist: Node = null
 var _comparison_node: Node2D = null
 
@@ -83,7 +84,7 @@ func _process(delta: float) -> void:
 	_wrap_background()
 
 	# 障害物との相互作用
-	_update_obstacle(delta)
+	_update_obstacles(delta)
 
 
 # ─── 成長段階の構築 ─────────────────────────────────────────────
@@ -264,11 +265,6 @@ func _build_background() -> void:
 func _create_scenery_strip() -> Node2D:
 	var strip := Node2D.new()
 
-	# 木を配置
-	var tree_positions := [100.0, 350.0, 650.0, 950.0, 1250.0, 1550.0, 1800.0]
-	for tx in tree_positions:
-		_add_tree(strip, tx)
-
 	# 柵
 	var fence := ColorRect.new()
 	fence.color = Color(0.72, 0.58, 0.38)
@@ -294,30 +290,16 @@ func _create_scenery_strip() -> Node2D:
 	_add_flowers(strip, 1100.0)
 	_add_flowers(strip, 1650.0)
 
+	# 自販機
+	_add_vending_machine(strip, 450.0)
+	_add_vending_machine(strip, 1200.0)
+
+	# 駐車している車
+	_add_car(strip, 820.0)
+	_add_car(strip, 1700.0)
+
 	return strip
 
-
-func _add_tree(parent: Node2D, x: float) -> void:
-	var trunk_h := 80.0 + randf_range(-15.0, 15.0)
-	var canopy_r := 35.0 + randf_range(-5.0, 5.0)
-
-	# 幹
-	var trunk := ColorRect.new()
-	trunk.color = Color(0.50, 0.38, 0.22)
-	trunk.position = Vector2(x - 6.0, _ground_y - trunk_h)
-	trunk.size = Vector2(12.0, trunk_h)
-	parent.add_child(trunk)
-
-	# 葉（三角形）
-	var canopy := Polygon2D.new()
-	var green_var := randf_range(-0.05, 0.05)
-	canopy.color = Color(0.35 + green_var, 0.65 + green_var, 0.30 + green_var)
-	canopy.polygon = PackedVector2Array([
-		Vector2(x, _ground_y - trunk_h - canopy_r * 1.5),
-		Vector2(x - canopy_r, _ground_y - trunk_h + 10.0),
-		Vector2(x + canopy_r, _ground_y - trunk_h + 10.0),
-	])
-	parent.add_child(canopy)
 
 
 func _add_bench(parent: Node2D, x: float) -> void:
@@ -351,6 +333,28 @@ func _add_flowers(parent: Node2D, x: float) -> void:
 		parent.add_child(flower)
 
 
+func _add_vending_machine(parent: Node2D, x: float) -> void:
+	# StageBuilder の vending_machine 描画をそのまま流用（実物サイズ: 幅80cm×高183cm）
+	var p: float = _global.CM_TO_PX
+	var x_cm: float = x / p
+	var obs := {"id": "vending_machine", "x": x_cm, "x2": x_cm + 80.0, "height": 183, "type": "background"}
+	var holder := Node2D.new()
+	holder.position = Vector2(0.0, _ground_y)
+	parent.add_child(holder)
+	StageBuilder._build_obstacle(obs, holder, p)
+
+
+func _add_car(parent: Node2D, x: float) -> void:
+	# StageBuilder の car 描画をそのまま流用（実物サイズ: 幅170cm×高150cm）
+	var p: float = _global.CM_TO_PX
+	var x_cm: float = x / p
+	var obs := {"id": "car", "x": x_cm, "x2": x_cm + 170.0, "height": 150, "type": "background"}
+	var holder := Node2D.new()
+	holder.position = Vector2(0.0, _ground_y)
+	parent.add_child(holder)
+	StageBuilder._build_obstacle(obs, holder, p)
+
+
 func _wrap_background() -> void:
 	for strip in _bg_strips:
 		if strip.position.x + SCENERY_STRIP_WIDTH < 0:
@@ -363,70 +367,168 @@ func _wrap_background() -> void:
 
 # ─── 障害物 ────────────────────────────────────────────────────
 
-func _spawn_obstacle() -> void:
+func _spawn_obstacle_sequence() -> void:
 	if _protagonist == null:
 		return
+	var proto_h: float = float(_protagonist.m["height"])
 
-	var proto_height: float = float(_protagonist.m["height"])
-	# 主人公が屈む必要があるが、はるかは通れる高さ
-	_obstacle_height_cm = min(proto_height - 15.0, 175.0)
-	var obstacle_h_px: float = _obstacle_height_cm * _global.CM_TO_PX
-
-	_obstacle_node = Node2D.new()
-	_obstacle_node.position = Vector2(_vp_size.x + 100, 0)
-	_obstacle_node.z_index = -1
-	add_child(_obstacle_node)
-
-	var beam_width := 120.0
-	var beam_thickness := 12.0
-	var post_width := 8.0
-
-	# 上部の梁
-	var beam := ColorRect.new()
-	beam.color = Color(0.55, 0.45, 0.30)
-	beam.position = Vector2(-beam_width / 2.0, _ground_y - obstacle_h_px)
-	beam.size = Vector2(beam_width, beam_thickness)
-	_obstacle_node.add_child(beam)
-
-	# 左の柱
-	var left_post := ColorRect.new()
-	left_post.color = Color(0.50, 0.40, 0.28)
-	left_post.position = Vector2(-beam_width / 2.0, _ground_y - obstacle_h_px)
-	left_post.size = Vector2(post_width, obstacle_h_px)
-	_obstacle_node.add_child(left_post)
-
-	# 右の柱
-	var right_post := ColorRect.new()
-	right_post.color = Color(0.50, 0.40, 0.28)
-	right_post.position = Vector2(beam_width / 2.0 - post_width, _ground_y - obstacle_h_px)
-	right_post.size = Vector2(post_width, obstacle_h_px)
-	_obstacle_node.add_child(right_post)
+	# 3種の障害物を画面右外に時系列で配置
+	var configs := [
+		{"type": ObstacleType.LOW_CEILING, "x": _vp_size.x + 150.0,  "h_cm": minf(proto_h - 5.0,  180.0)},
+		{"type": ObstacleType.CHIN_BAR,    "x": _vp_size.x + 750.0,  "h_cm": minf(proto_h - 12.0, 172.0)},
+		{"type": ObstacleType.LOW_GATE,    "x": _vp_size.x + 1350.0, "h_cm": minf(proto_h - 22.0, 164.0)},
+	]
+	for cfg in configs:
+		var h_px: float = cfg["h_cm"] * _global.CM_TO_PX
+		var obs_node := _build_obstacle_visual(cfg["type"], h_px)
+		obs_node.position = Vector2(cfg["x"], 0)
+		obs_node.z_index = -1
+		add_child(obs_node)
+		_obstacles.append({"node": obs_node, "type": cfg["type"], "height_cm": cfg["h_cm"], "passed": false})
 
 
-func _update_obstacle(delta: float) -> void:
-	if _obstacle_node == null:
+func _build_obstacle_visual(type: int, h_px: float) -> Node2D:
+	var root := Node2D.new()
+	match type:
+		ObstacleType.LOW_CEILING:
+			# 長い天井板（左右に壁断面）
+			var ceiling := ColorRect.new()
+			ceiling.color = Color(0.55, 0.50, 0.42)
+			ceiling.position = Vector2(-80.0, _ground_y - h_px - 10.0)
+			ceiling.size = Vector2(160.0, 12.0)
+			root.add_child(ceiling)
+			for wx: float in [-80.0, 68.0]:
+				var wall := ColorRect.new()
+				wall.color = Color(0.48, 0.44, 0.36)
+				wall.position = Vector2(wx, _ground_y - h_px - 10.0)
+				wall.size = Vector2(12.0, h_px + 10.0)
+				root.add_child(wall)
+		ObstacleType.CHIN_BAR:
+			# 鉄棒（支柱2本＋横棒）
+			for px: float in [-30.0, 22.0]:
+				var post := ColorRect.new()
+				post.color = Color(0.45, 0.45, 0.48)
+				post.position = Vector2(px, _ground_y - h_px - 8.0)
+				post.size = Vector2(8.0, h_px + 8.0)
+				root.add_child(post)
+			var bar := ColorRect.new()
+			bar.color = Color(0.70, 0.70, 0.75)
+			bar.position = Vector2(-30.0, _ground_y - h_px - 8.0)
+			bar.size = Vector2(60.0, 8.0)
+			root.add_child(bar)
+		ObstacleType.LOW_GATE:
+			# くぐり戸（門柱2本＋上梁）
+			var beam_w := 100.0
+			var post_w := 10.0
+			var beam := ColorRect.new()
+			beam.color = Color(0.52, 0.40, 0.26)
+			beam.position = Vector2(-beam_w / 2.0, _ground_y - h_px - 12.0)
+			beam.size = Vector2(beam_w, 14.0)
+			root.add_child(beam)
+			for px: float in [-beam_w / 2.0, beam_w / 2.0 - post_w]:
+				var post := ColorRect.new()
+				post.color = Color(0.46, 0.35, 0.22)
+				post.position = Vector2(px, _ground_y - h_px - 12.0)
+				post.size = Vector2(post_w, h_px + 12.0)
+				root.add_child(post)
+	return root
+
+
+func _spawn_obstacles_loop() -> void:
+	var types := [ObstacleType.LOW_CEILING, ObstacleType.CHIN_BAR, ObstacleType.LOW_GATE]
+	var idx := 0
+	await get_tree().create_timer(4.0).timeout
+	while _walking and not _skipped:
+		if _protagonist != null:
+			_spawn_single_obstacle(types[idx % types.size()])
+			idx += 1
+		await get_tree().create_timer(7.0).timeout
+
+
+func _spawn_single_obstacle(type: int) -> void:
+	if _protagonist == null:
 		return
+	var proto_h: float = float(_protagonist.m["height"])
+	var h_cm: float
+	match type:
+		ObstacleType.LOW_CEILING: h_cm = minf(proto_h - 5.0,  180.0)
+		ObstacleType.CHIN_BAR:   h_cm = minf(proto_h - 12.0, 172.0)
+		ObstacleType.LOW_GATE:   h_cm = minf(proto_h - 22.0, 164.0)
+	var h_px: float = h_cm * _global.CM_TO_PX
+	var obs_node := _build_obstacle_visual(type, h_px)
+	obs_node.position = Vector2(_vp_size.x + 200.0, 0.0)
+	obs_node.z_index = -1
+	add_child(obs_node)
+	_obstacles.append({"node": obs_node, "type": type, "height_cm": h_cm, "passed": false})
 
-	_obstacle_node.position.x -= SCROLL_SPEED * delta
 
-	var proto_x: float = _protagonist.position.x
-	var obs_x: float = _obstacle_node.position.x
-	var distance: float = abs(obs_x - proto_x)
+func _update_obstacles(delta: float) -> void:
+	var proto_x: float = _protagonist.position.x if _protagonist else 0.0
+	var haruka_x: float = _haruka.position.x if _haruka else 0.0
+	var any_proto_active := false
 
-	if distance < 80.0 and obs_x < proto_x + 40.0:
-		if not _ducking:
-			_ducking = true
-		_protagonist.visual_height_cm = lerp(
-			_protagonist.visual_height_cm,
-			_obstacle_height_cm - 5.0,
-			10.0 * delta,
-		)
-	elif _ducking:
+	for obs in _obstacles:
+		if obs.get("passed", false):
+			continue
+		obs["node"].position.x -= SCROLL_SPEED * delta
+		var obs_x: float = obs["node"].position.x
+		var dp: float = obs_x - proto_x  # 正=まだ来ていない, 負=通過中
+		var dh: float = obs_x - haruka_x
+
+		match obs["type"]:
+			ObstacleType.LOW_CEILING:
+				# 主人公: 天井に頭が当たるなら屈む
+				if dp < 80.0 and dp > -140.0:
+					any_proto_active = true
+					_ducking = true
+					_protagonist.visual_height_cm = lerp(
+						_protagonist.visual_height_cm, obs["height_cm"] - 3.0, 9.0 * delta)
+				# はるかはそのまま通過
+
+			ObstacleType.CHIN_BAR:
+				# 主人公: 近づいたらジャンプ
+				if dp < 60.0 and dp > -20.0 and not _jumping:
+					_start_jump()
+				# はるか: 棒の下をくぐる
+				if dh < 70.0 and dh > -100.0 and _haruka != null:
+					_haruka.visual_height_cm = lerp(
+						_haruka.visual_height_cm, obs["height_cm"] - 5.0, 8.0 * delta)
+
+			ObstacleType.LOW_GATE:
+				# 主人公: 深く屈む
+				if dp < 70.0 and dp > -130.0:
+					any_proto_active = true
+					_ducking = true
+					_protagonist.visual_height_cm = lerp(
+						_protagonist.visual_height_cm, obs["height_cm"] - 10.0, 10.0 * delta)
+				# はるか: ゲート高より高ければ軽く屈む
+				if dh < 70.0 and dh > -100.0 and _haruka != null:
+					var haruka_h: float = float(_haruka.m["height"])
+					if haruka_h > obs["height_cm"]:
+						_haruka.visual_height_cm = lerp(
+							_haruka.visual_height_cm, obs["height_cm"] - 3.0, 7.0 * delta)
+
+		if obs_x < -300.0:
+			obs["node"].queue_free()
+			obs["passed"] = true
+
+	# 全障害物を通過したら屈み解除
+	if not any_proto_active:
 		_ducking = false
 
-	if obs_x < -200:
-		_obstacle_node.queue_free()
-		_obstacle_node = null
+	# 通過済みを除去
+	_obstacles = _obstacles.filter(func(o: Dictionary) -> bool: return not o.get("passed", false))
+
+
+func _start_jump() -> void:
+	if _jumping or _protagonist == null:
+		return
+	_jumping = true
+	var base_y: float = _protagonist.position.y
+	var tw := create_tween()
+	tw.tween_property(_protagonist, "position:y", base_y - 38.0, 0.25)
+	tw.tween_property(_protagonist, "position:y", base_y, 0.28)
+	tw.tween_callback(func() -> void: _jumping = false)
 
 
 # ─── アニメーション制御 ────────────────────────────────────────
@@ -438,7 +540,7 @@ func _run_animation() -> void:
 
 	# ステージ数に応じて表示時間を動的に決定
 	var stage_dur: float = clampf(
-		30.0 / max(_growth_stages.size(), 1),
+		20.0 / max(_growth_stages.size(), 1),
 		STAGE_DURATION_MIN, STAGE_DURATION_MAX
 	)
 
@@ -449,8 +551,9 @@ func _run_animation() -> void:
 	if _skipped:
 		return
 
-	# (2) 歩行開始
+	# (2) 歩行開始・障害物ループ起動（fire-and-forget）
 	_walking = true
+	_spawn_obstacles_loop()
 
 	# (3) 最初の段階を表示
 	_show_labels(_growth_stages[0])
@@ -468,14 +571,7 @@ func _run_animation() -> void:
 		if _skipped:
 			return
 
-	# (5) 障害物演出（主人公が十分に高い場合のみ）
-	if _protagonist != null and float(_protagonist.m["height"]) > 160.0:
-		_spawn_obstacle()
-		await get_tree().create_timer(3.0).timeout
-		if _skipped:
-			return
-
-	# (6) 成長サマリーを表示
+	# (5) 成長サマリーを表示（障害物はウォーク開始時からループ生成済み）
 	await _show_growth_summary()
 	if _skipped:
 		return
