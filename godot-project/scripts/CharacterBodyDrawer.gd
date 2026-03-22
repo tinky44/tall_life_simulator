@@ -130,6 +130,21 @@ static func get_side_garment_waist_pos(ctx: DrawContext) -> Vector2:
 	var torso_dir = torso_vec.normalized() if torso_vec.length() > 0.01 else Vector2(0, 1)
 	return shoulder + torso_dir * u_arm
 
+static func get_side_skirt_top_edge(ctx: DrawContext, waist_pos: Vector2, base_width: float, fallback_u: Vector2 = Vector2(0, 1)) -> Dictionary:
+	var d = ctx.d
+	var crotch_pos = Vector2(d["cx"], d["cy"])
+	var torso_u = _normalized_or(crotch_pos - waist_pos, fallback_u)
+	var top_n = Vector2(-torso_u.y, torso_u.x).normalized()
+	var half_top = base_width / 2.0
+	return {
+		"crotch_pos": crotch_pos,
+		"torso_u": torso_u,
+		"top_n": top_n,
+		"half_top": half_top,
+		"belt_back": waist_pos + top_n * half_top,
+		"belt_front": waist_pos - top_n * half_top,
+	}
+
 # ジャンパー系トップスが正面・背面で共有するウエスト上端位置。
 # 側面と同じ「肩から胴体上部を一定距離 내려る」基準を、
 # 正面投影された胴体長へ比率変換して合わせる。
@@ -372,7 +387,8 @@ static func draw_skirt(ctx: DrawContext, bottoms_type: String, bottoms_color: Co
 		var seated_factor = _get_deep_seated_factor(d)
 		var avg_leg_ang = (d["leg_l_angle"] + d["leg_r_angle"]) / 2.0
 		# スカートは布のため重力で多少下に向くので、脚の角度を完全に追うのではなく軽減(0.7倍)
-		var skirt_ang = (avg_leg_ang * 0.7) * PI / 180.0 + PI / 2.0
+		var leg_follow = 0.45 if (is_jumper_skirt and ctx.pose == "chair_sit") else 0.7
+		var skirt_ang = (avg_leg_ang * leg_follow) * PI / 180.0 + PI / 2.0
 		# 【調整用】背中の傾きをスカート角度に反映する。waist_angleが増えるほど前方へ傾く。
 		# ジャンパー系(blazer/blouse_bow/jumper_skirt)は構造が固いため50%追従。
 		# 通常スカートは布が重力に引かれるため30%追従。
@@ -414,14 +430,15 @@ static func draw_skirt(ctx: DrawContext, bottoms_type: String, bottoms_color: Co
 		var axis = p_bottom - waist_pos
 		var skirt_u = _normalized_or(axis, Vector2(0, 1))
 		var skirt_n = Vector2(-skirt_u.y, skirt_u.x).normalized()
-		var crotch_pos = Vector2(d["cx"], d["cy"])
-		var torso_u = _normalized_or(crotch_pos - waist_pos, skirt_u)
-		var top_n = Vector2(-torso_u.y, torso_u.x).normalized()
+		var top_edge = get_side_skirt_top_edge(ctx, waist_pos, base_width, skirt_u)
+		var crotch_pos = top_edge["crotch_pos"]
+		var torso_u = top_edge["torso_u"]
+		var top_n = top_edge["top_n"]
 		var extend_u = Vector2(0, 1)
-		var half_top = base_width / 2.0
+		var half_top = float(top_edge["half_top"])
 		var half_hem = side_hem_w / 2.0
-		var belt_back = waist_pos + top_n * half_top
-		var belt_front = waist_pos - top_n * half_top
+		var belt_back = top_edge["belt_back"]
+		var belt_front = top_edge["belt_front"]
 		var hem_back_base = p_bottom + skirt_n * half_hem
 		var hem_front_base = p_bottom - skirt_n * half_hem
 		var front_side = Vector2(1, 0)

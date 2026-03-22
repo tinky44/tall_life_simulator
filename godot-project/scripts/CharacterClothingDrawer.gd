@@ -562,11 +562,14 @@ static func draw_suspenderSkirt_side(ctx: DrawContext, sx: float, sy: float, nav
 	# 胴体に沿った下向きベクトル（肩→へそ方向、腰曲げを考慮）
 	var navel_x = ctx.d["navel_x"]
 	var torso_down = Vector2(navel_x - sx, navel_y - sy)
-	var belt_vec = CharacterBodyDrawer.get_side_garment_waist_pos(ctx) - p_sh
+	var waist_anchor = CharacterBodyDrawer.get_side_garment_waist_pos(ctx)
+	var top_edge = CharacterBodyDrawer.get_side_skirt_top_edge(ctx, waist_anchor, half_t * 2.0)
+	var belt_front = top_edge["belt_front"]
+	var belt_back = top_edge["belt_back"]
 
 	# 前面ストラップ（胴体前端に細い黒帯、上端は胸のでっぱり位置から）
 	var p_front_top = p_sh_front + torso_down * 0.45 # 乳首高さ(肩から45%下)
-	var p_front_bot = p_sh_front + belt_vec
+	var p_front_bot = belt_front
 	var front_band = PackedVector2Array([
 		p_front_top,
 		p_front_top - fwd * fw,
@@ -576,7 +579,7 @@ static func draw_suspenderSkirt_side(ctx: DrawContext, sx: float, sy: float, nav
 	ctx.canvas.draw_polygon(front_band, PackedColorArray([strap_color]))
 
 	# 背面ストラップ（胴体背端に細い黒帯）
-	var p_back_bot = p_sh_back + belt_vec
+	var p_back_bot = belt_back
 	var back_band = PackedVector2Array([
 		p_sh_back,
 		p_sh_back + fwd * fw,
