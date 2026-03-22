@@ -130,6 +130,25 @@ var core_npcs: Dictionary = {
 			"bottoms_color": "#114422"
 		}
 	},
+	"park_giant": {
+		"name": "大男",
+		"role": "park",
+		"height_base": 200.0,
+		"height_mode": "fixed",
+		"greet_events": [
+			"今日は遊具より、こっちが目立ってるかもな。",
+			"公園に来ると、自分の背丈も少し落ち着いて見える。",
+			"でかい遊具を見ると、なんだか安心するんだよな。"
+		],
+		"appearance": {
+			"hair_style": "short",
+			"hair_color": "#2a1d14",
+			"tops_type": "t_shirt",
+			"tops_color": "#4a6f66",
+			"bottoms_type": "pants",
+			"bottoms_color": "#2f3542"
+		}
+	},
 	"mother": {
 		"name": "お母さん",
 		"role": "family",

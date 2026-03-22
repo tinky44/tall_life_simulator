@@ -115,6 +115,18 @@ const STAGES = {
             {"id": "door_to_school_hallway_elementary", "x": 1050, "x2": 1150, "height": 200, "type": "overhead"}
         ]
     },
+    "park": {
+        "name": "公園",
+        "width": 2500,
+        "ceiling_height": null,
+        "obstacles": [
+            {"id": "giant_slide", "x": 240, "x2": 420, "height": 250, "type": "background"},
+            {"id": "jungle_gym", "x": 620, "x2": 860, "height": 230, "type": "background"},
+            {"id": "giant_height_scale", "x": 1080, "x2": 1165, "height": 320, "type": "background"},
+            {"id": "giant_tent", "x": 1440, "x2": 1880, "height": 250, "type": "background"},
+            {"id": "park_supplement_vendor", "x": 2070, "x2": 2205, "height": 95, "type": "ground"}
+        ]
+    },
     "school_hallway": {
         "name": "学校の廊下",
         "width": 3000,
@@ -339,6 +351,8 @@ static func build_stage(stage_id: String, parent_node: Node2D, cm_to_px: float, 
         floor_rect.color = Color(0.82, 0.88, 0.82) # 明るい薄緑（保健室リノリウム）
     elif stage_id == "outdoor" or stage_id == "adjacent_town" or stage_id == "gakuenmachi":
         floor_rect.color = Color(0.55, 0.53, 0.50) # アスファルト
+    elif stage_id == "park":
+        floor_rect.color = Color(0.74, 0.67, 0.48) # 公園の土
     elif is_schoolyard_stage(stage_id):
         floor_rect.color = Color(0.68, 0.62, 0.48) # 砂地（校庭）
     elif is_gymnasium_stage(stage_id):
@@ -356,9 +370,9 @@ static func build_stage(stage_id: String, parent_node: Node2D, cm_to_px: float, 
     # 左右の見えない壁（ステージ端から落ちないようにする）
     var _edge_w_px: float = stage_data["width"] * cm_to_px
     var wall_positions: Array[float] = []
-    if stage_id != "adjacent_town":
+    if stage_id != "adjacent_town" and stage_id != "outdoor":
         wall_positions.append(0.0)
-    if stage_id != "outdoor":
+    if stage_id != "outdoor" and stage_id != "park":
         wall_positions.append(_edge_w_px)
     for wall_x in wall_positions:
         var wall_body = StaticBody2D.new()
@@ -371,9 +385,12 @@ static func build_stage(stage_id: String, parent_node: Node2D, cm_to_px: float, 
         wall_body.add_child(wall_shape)
         parent_node.add_child(wall_body)
     if stage_id == "outdoor":
+        _add_edge_trigger(parent_node, "LeftEdgeTrigger", 0.0, "park")
         _add_edge_trigger(parent_node, "RightEdgeTrigger", _edge_w_px, "adjacent_town")
     elif stage_id == "adjacent_town":
         _add_edge_trigger(parent_node, "LeftEdgeTrigger", 0.0, "outdoor")
+    elif stage_id == "park":
+        _add_edge_trigger(parent_node, "RightEdgeTrigger", _edge_w_px, "outdoor")
     elif stage_id == "station":
         # 駅右端 → ホーム（右端から150cm手前でトリガー、壁は端に残す）
         _add_edge_trigger(parent_node, "RightEdgeTrigger", (_edge_w_px - 150 * cm_to_px), "platform")
@@ -1140,6 +1157,49 @@ static func build_stage(stage_id: String, parent_node: Node2D, cm_to_px: float, 
             fl.size = Vector2(200 * cm_to_px, 8)
             inf_bg.add_child(fl)
         parent_node.add_child(inf_bg)
+
+    # 公園ステージ: 空・芝生・木立の背景
+    elif stage_id == "park":
+        var park_bg = Node2D.new()
+        park_bg.set_meta("is_stage_obj", true)
+        park_bg.z_index = -10
+        var park_w_px = stage_data["width"] * cm_to_px
+        var park_sky = ColorRect.new()
+        park_sky.color = Color(0.50, 0.76, 0.98)
+        park_sky.position = Vector2(0, -700 * cm_to_px)
+        park_sky.size = Vector2(park_w_px, 430 * cm_to_px)
+        park_bg.add_child(park_sky)
+        var park_horizon = ColorRect.new()
+        park_horizon.color = Color(0.82, 0.93, 0.99)
+        park_horizon.position = Vector2(0, -270 * cm_to_px)
+        park_horizon.size = Vector2(park_w_px, 270 * cm_to_px)
+        park_bg.add_child(park_horizon)
+        var park_grass = ColorRect.new()
+        park_grass.color = Color(0.58, 0.78, 0.44)
+        park_grass.position = Vector2(0, -60 * cm_to_px)
+        park_grass.size = Vector2(park_w_px, 60 * cm_to_px)
+        park_bg.add_child(park_grass)
+        for tree in [
+            {"x": 160.0, "w": 70.0, "h": 210.0},
+            {"x": 470.0, "w": 90.0, "h": 240.0},
+            {"x": 980.0, "w": 78.0, "h": 220.0},
+            {"x": 1960.0, "w": 90.0, "h": 250.0},
+            {"x": 2290.0, "w": 72.0, "h": 210.0},
+        ]:
+            var tx = float(tree["x"]) * cm_to_px
+            var tw = float(tree["w"]) * cm_to_px
+            var th = float(tree["h"]) * cm_to_px
+            var trunk = ColorRect.new()
+            trunk.color = Color(0.43, 0.29, 0.18)
+            trunk.position = Vector2(tx + tw * 0.4, -th * 0.60)
+            trunk.size = Vector2(tw * 0.20, th * 0.60)
+            park_bg.add_child(trunk)
+            var foliage = ColorRect.new()
+            foliage.color = Color(0.28, 0.62, 0.24)
+            foliage.position = Vector2(tx, -th)
+            foliage.size = Vector2(tw, th * 0.62)
+            park_bg.add_child(foliage)
+        parent_node.add_child(park_bg)
 
     # 校庭ステージ: 空と砂地と学校外観の背景
     elif is_schoolyard_stage(stage_id):
@@ -2885,6 +2945,45 @@ static func _build_obstacle(obs: Dictionary, parent: Node2D, cm_to_px: float, st
         slider.size = Vector2(w_px * 1.3, 8)
         node.add_child(slider)
 
+    elif o_id == "giant_height_scale":
+        cr.color = Color(0.88, 0.86, 0.78)
+        var giant_scale_x = obs["x"] * cm_to_px
+        var giant_frame = ReferenceRect.new()
+        giant_frame.editor_only = false
+        giant_frame.border_color = Color(0.48, 0.34, 0.22)
+        giant_frame.border_width = 4.0
+        giant_frame.position = cr.position
+        giant_frame.size = cr.size
+        node.add_child(giant_frame)
+        for mark_cm in range(100, 321, 10):
+            var mark_y = - float(mark_cm) * cm_to_px
+            var mark_width = w_px * (0.82 if mark_cm % 50 == 0 else 0.62)
+            var giant_mark = ColorRect.new()
+            giant_mark.color = Color(0.22, 0.14, 0.08)
+            giant_mark.position = Vector2(giant_scale_x + w_px - mark_width, mark_y - 2)
+            giant_mark.size = Vector2(mark_width, 4)
+            node.add_child(giant_mark)
+            if mark_cm % 20 == 0:
+                var giant_label = Label.new()
+                giant_label.text = "%d" % mark_cm
+                giant_label.add_theme_font_size_override("font_size", 11)
+                giant_label.add_theme_color_override("font_color", Color(0.18, 0.10, 0.04))
+                giant_label.position = Vector2(giant_scale_x + 4, mark_y - 9)
+                giant_label.size = Vector2(w_px * 0.65, 18)
+                node.add_child(giant_label)
+        var head_slider = ColorRect.new()
+        head_slider.color = Color(0.84, 0.12, 0.12)
+        head_slider.position = Vector2(giant_scale_x - w_px * 0.55, -h_px - 6)
+        head_slider.size = Vector2(w_px * 1.55, 10)
+        node.add_child(head_slider)
+        var header = Label.new()
+        header.text = "MEGA SCALE"
+        header.add_theme_font_size_override("font_size", 12)
+        header.add_theme_color_override("font_color", Color(0.32, 0.20, 0.08))
+        header.position = Vector2(giant_scale_x - w_px * 0.2, -h_px - 28)
+        header.size = Vector2(w_px * 1.4, 20)
+        node.add_child(header)
+
     elif o_id == "weight_scale":
         # 体重計（床に置く薄い台）
         cr.color = Color(0.88, 0.90, 0.92)
@@ -3260,6 +3359,46 @@ static func _build_obstacle(obs: Dictionary, parent: Node2D, cm_to_px: float, st
             rung.z_index = -1
             node.add_child(rung)
 
+    elif o_id == "giant_slide":
+        cr.color = Color(0, 0, 0, 0)
+        var gs_x = obs["x"] * cm_to_px
+        var ladder = ColorRect.new()
+        ladder.color = Color(0.68, 0.72, 0.78)
+        ladder.position = Vector2(gs_x + w_px * 0.08, -h_px)
+        ladder.size = Vector2(w_px * 0.14, h_px)
+        ladder.z_index = -1
+        node.add_child(ladder)
+        for rung_idx in range(5):
+            var rung = ColorRect.new()
+            rung.color = Color(0.82, 0.84, 0.88)
+            rung.position = Vector2(gs_x + w_px * 0.07, -h_px + h_px * 0.16 * rung_idx + 18)
+            rung.size = Vector2(w_px * 0.16, 6)
+            rung.z_index = -1
+            node.add_child(rung)
+        var deck = ColorRect.new()
+        deck.color = Color(0.92, 0.40, 0.18)
+        deck.position = Vector2(gs_x + w_px * 0.20, -h_px)
+        deck.size = Vector2(w_px * 0.18, 16)
+        deck.z_index = -1
+        node.add_child(deck)
+        var chute = Polygon2D.new()
+        chute.color = Color(0.96, 0.66, 0.18)
+        chute.z_index = -1
+        chute.polygon = PackedVector2Array([
+            Vector2(gs_x + w_px * 0.33, -h_px + 6),
+            Vector2(gs_x + w_px * 0.42, -h_px + 6),
+            Vector2(gs_x + w_px * 0.82, -24),
+            Vector2(gs_x + w_px * 0.70, -24),
+        ])
+        node.add_child(chute)
+        for rail_x in [gs_x + w_px * 0.31, gs_x + w_px * 0.44]:
+            var rail = ColorRect.new()
+            rail.color = Color(0.72, 0.76, 0.80)
+            rail.position = Vector2(rail_x, -h_px + 2)
+            rail.size = Vector2(6, h_px * 0.20)
+            rail.z_index = -1
+            node.add_child(rail)
+
     elif "horizontal_bar" in o_id:
         # 鉄棒（支柱2本 + 横バー）
         cr.color = Color(0, 0, 0, 0)
@@ -3318,6 +3457,42 @@ static func _build_obstacle(obs: Dictionary, parent: Node2D, cm_to_px: float, st
             hbar.size = Vector2(w_px, 6)
             hbar.z_index = -1
             node.add_child(hbar)
+
+    elif o_id == "giant_tent":
+        cr.color = Color(0, 0, 0, 0)
+        var tent_x = obs["x"] * cm_to_px
+        var tent_body = Polygon2D.new()
+        tent_body.color = Color(0.82, 0.60, 0.32)
+        tent_body.z_index = -1
+        tent_body.polygon = PackedVector2Array([
+            Vector2(tent_x, 0),
+            Vector2(tent_x + w_px * 0.14, -h_px * 0.78),
+            Vector2(tent_x + w_px * 0.50, -h_px),
+            Vector2(tent_x + w_px * 0.86, -h_px * 0.78),
+            Vector2(tent_x + w_px, 0),
+        ])
+        node.add_child(tent_body)
+        var tent_flap = Polygon2D.new()
+        tent_flap.color = Color(0.68, 0.46, 0.22)
+        tent_flap.z_index = -1
+        tent_flap.polygon = PackedVector2Array([
+            Vector2(tent_x + w_px * 0.38, 0),
+            Vector2(tent_x + w_px * 0.50, -h_px * 0.62),
+            Vector2(tent_x + w_px * 0.62, 0),
+        ])
+        node.add_child(tent_flap)
+        var tent_entry = ColorRect.new()
+        tent_entry.color = Color(0.14, 0.12, 0.10)
+        tent_entry.position = Vector2(tent_x + w_px * 0.44, -h_px * 0.44)
+        tent_entry.size = Vector2(w_px * 0.12, h_px * 0.44)
+        tent_entry.z_index = -1
+        node.add_child(tent_entry)
+        var pennant = ColorRect.new()
+        pennant.color = Color(0.90, 0.18, 0.20)
+        pennant.position = Vector2(tent_x + w_px * 0.49, -h_px - 18)
+        pennant.size = Vector2(12, 18)
+        pennant.z_index = -1
+        node.add_child(pennant)
 
     elif o_id == "basketball_hoop":
         # バスケゴール（支柱＋バックボード＋リング）
@@ -3457,6 +3632,40 @@ static func _build_obstacle(obs: Dictionary, parent: Node2D, cm_to_px: float, st
             gate_reader.position = Vector2(gx + gate_w * 0.06, -h_px + 6)
             gate_reader.size = Vector2(gate_w * 0.36, h_px * 0.18)
             node.add_child(gate_reader)
+
+    elif o_id == "park_supplement_vendor":
+        cr.color = Color(0, 0, 0, 0)
+        var vendor_x = obs["x"] * cm_to_px
+        var canopy = ColorRect.new()
+        canopy.color = Color(0.45, 0.12, 0.12)
+        canopy.position = Vector2(vendor_x, -h_px)
+        canopy.size = Vector2(w_px, 18)
+        node.add_child(canopy)
+        var table = ColorRect.new()
+        table.color = Color(0.50, 0.34, 0.20)
+        table.position = Vector2(vendor_x + 8, -h_px * 0.55)
+        table.size = Vector2(w_px - 16, 16)
+        node.add_child(table)
+        for leg_off in [18.0, w_px - 28.0]:
+            var leg = ColorRect.new()
+            leg.color = Color(0.42, 0.28, 0.16)
+            leg.position = Vector2(vendor_x + leg_off, -h_px * 0.55 + 16)
+            leg.size = Vector2(8, h_px * 0.55 - 16)
+            node.add_child(leg)
+        for bottle_idx in range(4):
+            var bottle = ColorRect.new()
+            bottle.color = Color(0.68, 0.92, 0.28)
+            bottle.position = Vector2(vendor_x + 22 + bottle_idx * ((w_px - 44) / 4.0), -h_px * 0.55 - 28)
+            bottle.size = Vector2(14, 28)
+            node.add_child(bottle)
+        var sign = Label.new()
+        sign.text = "+10cm"
+        sign.add_theme_font_size_override("font_size", 11)
+        sign.add_theme_color_override("font_color", Color(1.0, 0.95, 0.76))
+        sign.position = Vector2(vendor_x + 10, -h_px - 18)
+        sign.size = Vector2(w_px - 20, 18)
+        sign.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+        node.add_child(sign)
 
     elif o_id == "volleyball_net":
         # バレーボールネット（縦横の格子）
@@ -3721,6 +3930,12 @@ static func get_obstacle_comment(obs_id: String, h: float, oh: float) -> String:
                 return "家の玄関（高さ%dcm）。\nあなた（%dcm）は%dcm頭が当たります！" % [oh, h, round(h - oh)]
             else:
                 return "家の玄関（%dcm）。ただいま！" % oh
+        "height_scale":
+            return "身長計（%dcm）。\n保健室の壁際にある標準サイズです。" % oh
+        "giant_height_scale":
+            if h > oh:
+                return "巨大な身長計（%dcm）。\nあなたでもまだ全部が視界に入ります。" % oh
+            return "巨大な身長計（%dcm）。\n近づけばその場で身長を測れそうです。" % oh
         "door_to_train":
             if h > oh:
                 return "駅の入口（高さ%dcm）。\nあなた（%dcm）は%dcm頭が当たります！" % [oh, h, round(h - oh)]
@@ -3871,11 +4086,17 @@ static func get_obstacle_comment(obs_id: String, h: float, oh: float) -> String:
                 return "鉄棒（%dcm）。\n楽々と手が届きますね。" % oh
             else:
                 return "鉄棒（%dcm）。\n少し背伸びが必要ですね。" % oh
+        "giant_slide":
+            if h > oh:
+                return "巨大すべり台（%dcm）。\nあなた（%dcm）でも、まだしっかり遊具の形をしています。" % [oh, h]
+            return "巨大すべり台（%dcm）。\n見上げるとほとんど塔みたいです。" % oh
         "jungle_gym":
             if h > oh:
                 return "ジャングルジム（%dcm）。\nあなた（%dcm）はてっぺんより高い！" % [oh, h]
             else:
                 return "ジャングルジム（%dcm）。\n登ったら最上段から顔が見えそうですね。" % oh
+        "giant_tent":
+            return "巨大なテント（%dcm）。\nイベント用なのか、街の公園には不釣り合いなくらい大きい。" % oh
         "basketball_hoop":
             if h > oh:
                 return "バスケゴール（%dcm）。\nあなた（%dcm）はリングより高い！ダンクできそうですね！" % [oh, h]
@@ -3950,6 +4171,8 @@ static func get_obstacle_comment(obs_id: String, h: float, oh: float) -> String:
                 return "自販機（%dcm）より背が高いですね。\n取り出し口が遠く感じそうです。" % oh
             else:
                 return "自販機（%dcm）。\nあなた（%dcm）より%dcm高いです。" % [oh, h, round(oh - h)]
+        "park_supplement_vendor":
+            return "怪しい無人販売所（%dcm）。\n『身長サプリ +10cm』の札がいかにも怪しい。" % oh
         "blackboard":
             if h > 180:
                 return "黒板の上の方まで楽々手が届きますね。"

@@ -133,6 +133,7 @@ const TERM_HOTSPOT_ORDER = [
 	"gymnasium_basket",
 	"randoseru_farewell",
 	"schoolyard_tease",
+	"park_supplement_vendor",
 	"bookshelf_interact",
 ]
 const TERM_HOTSPOTS: Dictionary = {
@@ -237,6 +238,15 @@ const TERM_HOTSPOTS: Dictionary = {
 		"stress_delta": 2,
 		"feedback": "視線を感じる場所では少し気を張ってしまう",
 		"memory_note": "校庭の遊具の近くで、男子に声をかけられた。"
+	},
+	"park_supplement_vendor": {
+		"stage_id": "park",
+		"obs_id": "park_supplement_vendor",
+		"prompt": "怪しい販売所をのぞく",
+		"dialogue_npc": "park_vendor",
+		"dialogue_key": "default",
+		"story_flag_done": "park_supplement_vendor_taken",
+		"memory_note": "公園の怪しい無人販売所で、身長が伸びるというサプリを手に入れた。"
 	},
 	"bookshelf_interact": {
 		"stage_id": "myroom",
@@ -945,7 +955,7 @@ func _get_stress_dialogue_opener(npc_id: String) -> Dictionary:
 func _get_stage_mood_bucket(stage_id: String) -> String:
 	if stage_id == "room" or stage_id == "myroom":
 		return "home"
-	if stage_id in ["station", "platform", "train", "outdoor", "adjacent_town", "gakuenmae", "gakuenmachi"]:
+	if stage_id in ["station", "platform", "train", "outdoor", "park", "adjacent_town", "gakuenmae", "gakuenmachi"]:
 		return "station"
 	if StageBuilder.is_school_stage(stage_id):
 		return "school"
@@ -1231,6 +1241,19 @@ func _do_standup() -> void:
 	_dialogue_restore_pose = ""
 	_nearby_standup = false
 
+func _record_height_measurement_and_show() -> void:
+	var global = get_node_or_null("/root/Global")
+	if not global:
+		return
+	var current_height: float = float(global.current_params.get("height", 0.0))
+	var has_unmeasured: bool = current_height > float(global.recorded_height)
+	if has_unmeasured:
+		var prev_h: float = global.recorded_height
+		global.recorded_height = current_height
+		global.prev_height = prev_h
+		global.record_growth_history("measurement")
+	_show_measurement_result(false, has_unmeasured)
+
 func _start_dialogue(npc_id: String, key: String = "default") -> void:
 	if _in_dialogue or _measurement_showing or _term_choice_showing:
 		return
@@ -1473,12 +1496,7 @@ func _end_dialogue() -> void:
 			global.current_stage_id = "infirmary"
 		await _load_stage()
 	elif _current_dialogue_npc == "nurse" and _current_dialogue_key == "measurement_in_progress":
-		if global:
-			var prev_h: float = global.recorded_height
-			global.recorded_height = float(global.current_params["height"])
-			global.prev_height = prev_h
-			global.record_growth_history("measurement")
-		_show_measurement_result(false, true)
+		_record_height_measurement_and_show()
 	elif _current_dialogue_npc == "narrator" and _current_dialogue_key == "refrigerator_milk":
 		if global:
 			global.bonus_growth_cm += 1.0
@@ -1496,6 +1514,11 @@ func _end_dialogue() -> void:
 				global.set_meta("growth_pain_intense", true)
 				global.growth_pain_pending = true
 		# 「捨てる」は何もしない
+	elif _current_dialogue_npc == "park_vendor" and _current_dialogue_key == "default":
+		if global:
+			global.bonus_growth_cm += 10.0
+			global.set_meta("growth_pain_intense", true)
+			global.growth_pain_pending = true
 	elif _current_dialogue_npc == "teacher" and _current_dialogue_key == "semester_start":
 		if global and StageBuilder.is_school_classroom_stage(String(global.current_stage_id)):
 			call_deferred("_start_dialogue", "player", "term_school")
@@ -1883,9 +1906,15 @@ func _check_edge_transition() -> void:
 	var stage_id := String(global.current_stage_id)
 	var player_x_cm: float = player.global_position.x / p
 	if stage_id == "outdoor":
+		if player_x_cm <= 10.0:
+			_enter_edge_transition("park")
 		var stage_w: float = float(StageBuilder.STAGES["outdoor"]["width"])
 		if player_x_cm >= stage_w - 10.0:
 			_enter_edge_transition("adjacent_town")
+	elif stage_id == "park":
+		var stage_w: float = float(StageBuilder.STAGES["park"]["width"])
+		if player_x_cm >= stage_w - 10.0:
+			_enter_edge_transition("outdoor")
 	elif stage_id == "adjacent_town":
 		if player_x_cm <= 10.0:
 			_enter_edge_transition("outdoor")
@@ -2049,11 +2078,11 @@ func _update_bubble():
 			else:
 				_nearby_transition_door = obs_id
 				bubble_label.text += "\n[Eキーで移動]"
-		elif obs_id == "height_scale":
+		elif obs_id == "height_scale" or obs_id == "giant_height_scale":
 			_nearby_transition_door = ""
 			_nearby_height_scale = true
 			_nearby_term_hotspot = ""
-			_nearby_obs_id = ""
+			_nearby_obs_id = String(obs_id)
 			_nearby_standup = false
 			_nearby_bed = false
 			bubble_label.text += "\n[Eキー] 身長を測る"
@@ -2682,10 +2711,10 @@ func _unhandled_input(event: InputEvent) -> void:
 				var _hs_global = get_node_or_null("/root/Global")
 				var _has_unmeasured: bool = _hs_global != null and \
 					float(_hs_global.current_params["height"]) > _hs_global.recorded_height
-				if _has_unmeasured:
+				if _has_unmeasured and _nearby_obs_id == "height_scale":
 					_start_dialogue("nurse", "measurement_in_progress")
 				else:
-					_show_measurement_result()
+					_record_height_measurement_and_show()
 			elif _nearby_npc:
 				_interact_with_npc(_nearby_npc)
 
@@ -3238,7 +3267,11 @@ func _enter_edge_transition(target_stage: String) -> void:
 	if player:
 		var stage_width = float(StageBuilder.STAGES[resolved_target]["width"])
 		var spawn_x = 80.0
-		if from_stage_id == "adjacent_town" and resolved_target == "outdoor":
+		if from_stage_id == "outdoor" and resolved_target == "park":
+			spawn_x = stage_width - 120.0
+		elif from_stage_id == "park" and resolved_target == "outdoor":
+			spawn_x = 80.0
+		elif from_stage_id == "adjacent_town" and resolved_target == "outdoor":
 			spawn_x = stage_width - 80.0
 		elif from_stage_id == "station" and resolved_target == "platform":
 			spawn_x = 270.0  # ホーム左側に到着
@@ -3349,6 +3382,14 @@ func _spawn_npcs(stage_id: String) -> void:
 			"legRatio": 44.0,
 			"sex": "female"
 		}, {}, "", 90.0)
+
+	elif stage_id == "park":
+		_spawn_stage_npc(npc_scene, 520.0, {
+			"height": 200.0,
+			"ratio": 7.9,
+			"legRatio": 48.0,
+			"sex": "male"
+		}, {}, "park_giant", 28.0)
 
 	elif stage_id == "platform":
 		_spawn_stage_npc(npc_scene, 760.0, {
