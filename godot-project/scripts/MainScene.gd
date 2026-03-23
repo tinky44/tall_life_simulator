@@ -3480,7 +3480,7 @@ func _enter_edge_transition(target_stage: String) -> void:
 	_nearby_bed = false
 	_nearby_tent_rest = false
 	_update_actions_hud()
-	_load_stage()
+	await _load_stage()
 	if player:
 		var stage_width = float(StageBuilder.STAGES[resolved_target]["width"])
 		var spawn_x = 80.0
@@ -3496,9 +3496,13 @@ func _enter_edge_transition(target_stage: String) -> void:
 			spawn_x = stage_width - 260.0  # 駅右側に到着
 		player.position = Vector2(spawn_x * p, 0)
 	_edge_transition_running = false
-	# ランダム睡眠チェック（成長期の眠気）
-	if global and not _in_dialogue and not _in_sleep_dialogue_wait and randf() < GROWTH_SLEEP_CHANCE:
-		call_deferred("_start_dialogue", "narrator", "growth_sleep_warning")
+	# ランダム睡眠チェック（成長期の眠気）— 屋外系ステージのみ
+	if resolved_target in ["outdoor", "park", "adjacent_town"] \
+			and global and not _in_dialogue and not _in_sleep_dialogue_wait \
+			and randf() < GROWTH_SLEEP_CHANCE:
+		# カメラがプレイヤーに追従するまで待つ
+		await get_tree().create_timer(0.3).timeout
+		_start_dialogue("narrator", "growth_sleep_warning")
 
 func _get_entrance_dialogue_key(age: int) -> String:
 	if age <= 6:
@@ -3830,7 +3834,7 @@ func _enter_transition_door() -> void:
 	_nearby_transition_door = ""
 	_nearby_bed = false
 	_nearby_tent_rest = false
-	_load_stage()
+	await _load_stage()
 
 	# 遷移先の「戻り口ドア」の近くにスポーン
 	if player and from_stage_id != "" and StageBuilder.STAGES.has(new_stage_id):
@@ -3856,9 +3860,13 @@ func _enter_transition_door() -> void:
 		# station には door_to_platform を置かない設計なので、platform から戻る時は右側に出す
 		if not spawned and new_stage_id == "station" and from_stage_id == "platform":
 			player.position = Vector2((stage_width - 260.0) * p, 0)
-	# ランダム睡眠チェック（成長期の眠気）
-	if global and not _in_dialogue and not _in_sleep_dialogue_wait and randf() < GROWTH_SLEEP_CHANCE:
-		call_deferred("_start_dialogue", "narrator", "growth_sleep_warning")
+	# ランダム睡眠チェック（成長期の眠気）— 屋外系ステージのみ
+	if new_stage_id in ["outdoor", "park", "adjacent_town"] \
+			and global and not _in_dialogue and not _in_sleep_dialogue_wait \
+			and randf() < GROWTH_SLEEP_CHANCE:
+		# カメラがプレイヤーに追従するまで待つ
+		await get_tree().create_timer(0.3).timeout
+		_start_dialogue("narrator", "growth_sleep_warning")
 
 # ─── 成長システム ───────────────────────────────────────────────
 
@@ -4033,9 +4041,15 @@ func _show_measurement_result(return_to_myroom: bool = false, animate: bool = fa
 	var diff_avg: float = h - avg_h
 	var diff_prev: float = h - prev_h if prev_h > 0.0 else 0.0
 
+	# 予測身長の算出
+	var predicted: float = global.predict_final_height(18)
+
 	# 詳細テキスト（後でフェードイン）
 	var detail = "年齢：%d歳  %s\n" % [a, Global.get_school_term_label(a, global.term)]
-	detail += "同学年平均：%.1f cm  （差：%+.1f cm）\n\n" % [avg_h, diff_avg]
+	detail += "同学年平均：%.1f cm  （差：%+.1f cm）\n" % [avg_h, diff_avg]
+	if predicted > 0.0 and a < 18:
+		detail += "予測最終身長（18歳）：%.1f cm\n" % predicted
+	detail += "\n"
 	detail += global.get_measurement_comment(diff_avg)
 	detail += "\n\n【今学期の手触り】\n"
 	if global.term_memory_note != "":
@@ -4060,6 +4074,9 @@ func _show_measurement_result(return_to_myroom: bool = false, animate: bool = fa
 
 	# 学期末測定のみ成長演出。任意測定は現在値をそのまま表示する。
 	if _meas_graph:
+		# 予測線データをグラフに渡す
+		_meas_graph.predicted_height = predicted if (predicted > 0.0 and a < 18) else -1.0
+		_meas_graph.predicted_age = 18
 		if animate_growth:
 			var preview = global.growth_history.duplicate()
 			preview.append({

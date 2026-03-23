@@ -176,12 +176,14 @@ func _physics_process(delta: float) -> void:
 	_handle_auto_crouch()
 	_update_visual_height(delta)
 
-	# 脚の痛みフラグによる速度補正
+	# 脚の痛み・成長痛による速度補正
 	var _leg_pain_factor = 1.0
 	if has_node("/root/Global"):
 		var _g = get_node("/root/Global")
 		if _g.get("is_leg_pain"):
 			_leg_pain_factor = 0.5
+		elif _g.is_growth_pain_active():
+			_leg_pain_factor = 0.75
 
 	var direction := Input.get_axis("ui_left", "ui_right")
 
