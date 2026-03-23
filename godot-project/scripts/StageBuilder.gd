@@ -1359,7 +1359,7 @@ static func build_stage(stage_id: String, parent_node: Node2D, cm_to_px: float, 
         c_line.width = 3.0
         c_line.default_color = Color(1.0, 1.0, 0.2, 0.9) # やや明るい黄色
         c_line.z_as_relative = false
-        c_line.z_index = 10
+        c_line.z_index = -1
         ceiling_body.add_child(c_line)
         
         # 表示タイミングによっては見えないため、複数箇所にラベルを配置する
@@ -1376,7 +1376,7 @@ static func build_stage(stage_id: String, parent_node: Node2D, cm_to_px: float, 
             c_label.size = Vector2(400 * cm_to_px, 40)
             c_label.position = Vector2((lx - 200) * cm_to_px, -ceil_h_px - 45)
             c_label.z_as_relative = false
-            c_label.z_index = 10
+            c_label.z_index = -1
             ceiling_body.add_child(c_label)
 
         parent_node.add_child(ceiling_body)
@@ -4011,7 +4011,7 @@ static func _build_obstacle(obs: Dictionary, parent: Node2D, cm_to_px: float, st
         line.width = 3.0
         line.default_color = Color(1.0, 1.0, 0.2, 0.9) # やや明るい黄色
         line.z_as_relative = false
-        line.z_index = 10 # 全てのビジュアルより手前
+        line.z_index = -1
         node.add_child(line)
 
         # ラベル（名前と高さ）
@@ -4028,7 +4028,7 @@ static func _build_obstacle(obs: Dictionary, parent: Node2D, cm_to_px: float, st
         label.size = Vector2(w_px, 40)
         label.position = Vector2(obs["x"] * cm_to_px, -h_px - 45)
         label.z_as_relative = false
-        label.z_index = 10 # 全てのビジュアルより手前
+        label.z_index = -1
 
         node.add_child(label)
     parent.add_child(node)

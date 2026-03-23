@@ -209,6 +209,9 @@ static func _build_side_jumper_chair_skirt_quad(ctx: DrawContext, belt_back: Vec
 	var side_len = skirt_length
 	var back_hem = belt_back + back_dir * side_len
 	var front_hem = belt_front + front_dir * side_len
+	# スカート裾が膝を覆うよう保証（裾が膝より上になる場合にY座標を補正）
+	if front_hem.y < front_target_y:
+		front_hem.y = front_target_y
 
 	return {
 		"back_hem": back_hem,

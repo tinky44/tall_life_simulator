@@ -134,11 +134,13 @@ static func _draw_mouth_side(ctx: DrawContext, hx: float, hy: float, head_r: flo
 	ctx.canvas.draw_line(mouth_center - Vector2(2, 0), mouth_center + Vector2(5, 2), Color("#c07070"), 2.0)
 
 static func _draw_legwear_side(ctx: DrawContext, ankle: Vector2, knee: Vector2, shin_w: float, foot_w: float, foot_h: float, shoe_tint: float = 0.0) -> void:
+	# 靴底が地面(y=0)を超えないよう ankle の y 座標をクランプ
+	var clamped_ankle = Vector2(ankle.x, min(ankle.y, -foot_h))
 	var sock_h = foot_h * 0.55
-	var shin_up = (knee - ankle).normalized()
-	CharacterDrawUtils.draw_rect(ctx.canvas, ankle, ankle + shin_up * sock_h, shin_w, _get_sock_color_side(ctx))
+	var shin_up = (knee - clamped_ankle).normalized()
+	CharacterDrawUtils.draw_rect(ctx.canvas, clamped_ankle, clamped_ankle + shin_up * sock_h, shin_w, _get_sock_color_side(ctx))
 
-	var heel = ankle - Vector2(shin_w * 0.5, 0.0)
+	var heel = clamped_ankle - Vector2(shin_w * 0.5, 0.0)
 	var foot_color = _get_shoe_color_side(ctx).darkened(shoe_tint)
 	CharacterDrawUtils.draw_foot_side(ctx.canvas, heel, foot_w, foot_h, foot_color)
 

@@ -146,6 +146,7 @@ var follow_target: Node2D = null # セットされると追随モードになる
 var look_pitch: float = 0.0
 var look_head_angle: float = 0.0
 var _reaction_label: Label = null
+var _height_label: Label = null
 var _current_reaction_key: String = ""
 var _reaction_time_left: float = 0.0
 var _avoid_dir: float = 0.0
@@ -240,6 +241,19 @@ func _ready() -> void:
 	_reaction_label.z_index = 100
 	add_child(_reaction_label)
 
+	_height_label = Label.new()
+	_height_label.text = ""
+	_height_label.add_theme_font_size_override("font_size", 14)
+	_height_label.add_theme_color_override("font_color", Color(0.9, 0.95, 1.0))
+	_height_label.add_theme_color_override("font_outline_color", Color(0.1, 0.15, 0.2, 0.9))
+	_height_label.add_theme_constant_override("outline_size", 4)
+	_height_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_height_label.position = Vector2(-60, -100)
+	_height_label.size = Vector2(120, 30)
+	_height_label.z_index = 100
+	_height_label.visible = false
+	add_child(_height_label)
+
 func _process(delta: float) -> void:
 	var p_node: Node2D = get_parent().get_node_or_null("Player") as Node2D
 	if not p_node:
@@ -264,7 +278,12 @@ func _process(delta: float) -> void:
 
 	_update_look_towards_player(delta, p_node, player_m, abs_dist, dist_x)
 
-	_reaction_label.position.y = - (visual_height_cm * CM_TO_PX) - 40.0
+	var label_top_y: float = - (visual_height_cm * CM_TO_PX) - 40.0
+	_reaction_label.position.y = label_top_y
+	_height_label.position.y = label_top_y - 28.0
+	_height_label.text = "%.0f cm" % visual_height_cm
+	_height_label.visible = true
+
 	if npc_id == "":
 		_process_generic_reaction(delta, player_m, dist_x)
 	else:
@@ -548,6 +567,8 @@ func _reset_proximity_state() -> void:
 	_player_is_close = false
 	_proximity_time = 0.0
 	_greet_triggered_for_approach = false
+	if _height_label:
+		_height_label.visible = false
 
 func _show_reaction_text(text: String, duration: float) -> void:
 	_reaction_label.text = text

@@ -845,6 +845,18 @@ func _try_show_randoseru_bubble(px: float, player_height_cm: float, hit_dist: fl
 			dist = px - ox2
 		if dist >= hit_dist:
 			return false
+		# 本棚の方が近い場合は本棚を優先（ランドセルを無視）
+		for obs_child in get_children():
+			if obs_child.has_meta("is_stage_obj") and obs_child.has_meta("obs_id") and obs_child.has_meta("obs_x"):
+				if String(obs_child.get_meta("obs_id")) == "bookshelf":
+					var bs_x1 := float(obs_child.get_meta("obs_x"))
+					var bs_x2 := float(obs_child.get_meta("obs_x2"))
+					var bs_dist := 0.0
+					if px < bs_x1: bs_dist = bs_x1 - px
+					elif px > bs_x2: bs_dist = px - bs_x2
+					if bs_dist < dist:
+						return false
+					break
 		_nearby_npc = null
 		_nearby_transition_door = ""
 		_nearby_height_scale = false
@@ -1572,7 +1584,7 @@ func _end_dialogue() -> void:
 			n.z_index = -1
 	_sit_front_nodes.clear()
 
-	if _current_dialogue_npc == "haruka" and _current_dialogue_key == "measure_invite":
+	if _current_dialogue_npc == "haruka" and _current_dialogue_key.begins_with("measure_invite"):
 		if global:
 			global.haruka_following = true
 		for child in get_children():
@@ -3044,9 +3056,7 @@ func _update_ui():
 			stage_title_label.show()
 	var m = player.get("m")
 	if not m: return
-	
-	var params = global.current_params if global else m
-	
+
 	var age_val: int = global.age if global else 0
 	var term_val: int = global.term if global else 0
 	var text = "【基本情報】\n"
@@ -3059,7 +3069,6 @@ func _update_ui():
 	var confidence_val: int = global.self_confidence if global else 0
 	var complex_val: int = global.self_complex if global else 0
 	text += "気持ち: 受容 %d / 戸惑い %d\n" % [confidence_val, complex_val]
-	text += "身長: %.1f cm  頭身: %.1f  股下: %.1f%%\n" % [params["height"], params["ratio"], params["legRatio"]]
 	text += "Pose: %s ([1]-[5], [S]キー)\n" % player.pose
 	
 	text += "\n【操作方法】\n"
@@ -3486,6 +3495,9 @@ func _enter_edge_transition(target_stage: String) -> void:
 			spawn_x = stage_width - 260.0  # 駅右側に到着
 		player.position = Vector2(spawn_x * p, 0)
 	_edge_transition_running = false
+	# ランダム睡眠チェック（成長期の眠気）
+	if global and not _in_dialogue and not _in_sleep_dialogue_wait and randf() < GROWTH_SLEEP_CHANCE:
+		call_deferred("_start_dialogue", "narrator", "growth_sleep_warning")
 
 func _get_entrance_dialogue_key(age: int) -> String:
 	if age <= 6:
@@ -3843,6 +3855,9 @@ func _enter_transition_door() -> void:
 		# station には door_to_platform を置かない設計なので、platform から戻る時は右側に出す
 		if not spawned and new_stage_id == "station" and from_stage_id == "platform":
 			player.position = Vector2((stage_width - 260.0) * p, 0)
+	# ランダム睡眠チェック（成長期の眠気）
+	if global and not _in_dialogue and not _in_sleep_dialogue_wait and randf() < GROWTH_SLEEP_CHANCE:
+		call_deferred("_start_dialogue", "narrator", "growth_sleep_warning")
 
 # ─── 成長システム ───────────────────────────────────────────────
 
