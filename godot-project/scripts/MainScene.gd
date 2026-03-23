@@ -20,7 +20,6 @@ var _stage_title_prev_id: String = ""
 var minimap_bg: ColorRect
 var minimap_player: ColorRect
 var action_label: Label
-var growth_pain_label: Label
 var stage_title_label: Label
 
 # ポーズメニュー用
@@ -2490,20 +2489,6 @@ func _setup_ui():
 	action_label.add_theme_constant_override("outline_size", 4)
 	ui_layer.add_child(action_label)
 
-	growth_pain_label = Label.new()
-	growth_pain_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	growth_pain_label.offset_left = -360
-	growth_pain_label.offset_top = 40
-	growth_pain_label.offset_right = -20
-	growth_pain_label.offset_bottom = 68
-	growth_pain_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	growth_pain_label.add_theme_font_size_override("font_size", 15)
-	growth_pain_label.add_theme_color_override("font_color", Color(1.0, 0.84, 0.72))
-	growth_pain_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
-	growth_pain_label.add_theme_constant_override("outline_size", 4)
-	growth_pain_label.hide()
-	ui_layer.add_child(growth_pain_label)
-
 	stage_title_label = Label.new()
 	stage_title_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	stage_title_label.offset_left = 240
@@ -3068,8 +3053,6 @@ func _update_actions_hud() -> void:
 	var global = get_node_or_null("/root/Global")
 	if not global:
 		action_label.text = ""
-		if growth_pain_label:
-			growth_pain_label.hide()
 		return
 	var term_label: String = Global.get_school_term_label(int(global.age), int(global.term))
 	var day_in_term: int = int(global.day_in_term)
@@ -3089,14 +3072,6 @@ func _update_actions_hud() -> void:
 	else:
 		_last_soft_limit_notice_key = ""
 	action_label.add_theme_color_override("font_color", font_color)
-	if growth_pain_label:
-		var is_growth_pain_active: bool = global.has_method("is_growth_pain_active") and bool(global.is_growth_pain_active())
-		if is_growth_pain_active:
-			var remain_actions: int = int(global.growth_pain_actions)
-			growth_pain_label.text = "成長痛: 残り%d行動" % remain_actions
-			growth_pain_label.show()
-		else:
-			growth_pain_label.hide()
 
 
 func _update_ui():
@@ -4131,7 +4106,7 @@ func _show_measurement_result(return_to_myroom: bool = false, animate: bool = fa
 	# 学期末測定のみ成長演出。任意測定は現在値をそのまま表示する。
 	if _meas_graph:
 		# 予測線データをグラフに渡す
-		_meas_graph.predicted_height = predicted if (predicted > 0.0 and a < 18) else -1.0
+		_meas_graph.predicted_height = -1.0
 		_meas_graph.predicted_age = 18
 		if animate_growth:
 			var preview = global.growth_history.duplicate()
