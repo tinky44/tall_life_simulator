@@ -1969,7 +1969,7 @@ static func _build_obstacle(obs: Dictionary, parent: Node2D, cm_to_px: float, st
         adoor_center.z_index = -1
         node.add_child(adoor_center)
 
-    elif o_id == "door_to_school_hallway_elementary":
+    elif o_id == "door_to_school_hallway_elementary" and stage_id == "outdoor":
         cr.color = Color(0, 0, 0, 0)
         var elem_x = obs["x"] * cm_to_px
         var elem_post_w = w_px * 0.16
@@ -2029,7 +2029,7 @@ static func _build_obstacle(obs: Dictionary, parent: Node2D, cm_to_px: float, st
         adj_opening.z_index = -1
         node.add_child(adj_opening)
 
-    elif o_id == "door_to_school_hallway_high":
+    elif o_id == "door_to_school_hallway_high" and stage_id == "adjacent_town_high":
         cr.color = Color(0, 0, 0, 0)
         var high_gate_x = obs["x"] * cm_to_px
         var high_post_w = w_px * 0.14
@@ -2070,8 +2070,8 @@ static func _build_obstacle(obs: Dictionary, parent: Node2D, cm_to_px: float, st
         high_nameplate.z_index = -1
         node.add_child(high_nameplate)
 
-    elif o_id.begins_with("door_to_school_hallway"):
-        # 学校のガラス引き戸ドア（学校内部スタイル）
+    elif o_id.begins_with("door_to_school_hallway") and o_id.ends_with("_middle"):
+        # 学校のガラス引き戸ドア（学校内部スタイル、中学校のみ）
         cr.color = Color(0, 0, 0, 0)
         var sch_x = obs["x"] * cm_to_px
         # ドア枠（暗い木/アルミ）

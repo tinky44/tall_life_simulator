@@ -1606,6 +1606,7 @@ func _end_dialogue() -> void:
 	elif _current_dialogue_npc == "haruka" and _current_dialogue_key == "height_check_invite":
 		if global:
 			global.height_measured_this_term = true
+			global.haruka_following = true
 			global.current_stage_id = "infirmary"
 		await _load_stage()
 	elif _current_dialogue_npc == "nurse" and _current_dialogue_key == "measurement_in_progress":
