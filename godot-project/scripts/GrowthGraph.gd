@@ -3,6 +3,8 @@ extends Control
 ## set_data(growth_history) を呼んで queue_redraw() で更新する
 
 var data: Array = []
+var predicted_height: float = -1.0  # 予測最終身長（-1なら非表示）
+var predicted_age: int = 18         # 予測対象年齢
 
 const ML: float = 52.0  # margin left
 const MT: float = 16.0  # margin top
@@ -55,6 +57,9 @@ func _draw() -> void:
 		min_h = minf(min_h, float(entry.get("avg_height", 100.0)))
 		max_h = maxf(max_h, float(entry.get("height",     200.0)))
 		max_h = maxf(max_h, float(entry.get("avg_height", 200.0)))
+	# 予測身長も範囲に含める
+	if predicted_height > 0.0:
+		max_h = maxf(max_h, predicted_height)
 	var h_range: float = maxf(max_h - min_h, 10.0)
 	min_h = maxf(min_h - h_range * 0.12, 0.0)
 	max_h = max_h + h_range * 0.12
@@ -106,8 +111,37 @@ func _draw() -> void:
 			draw_string(font, Vector2(pt.x - 12.0, MT + gh + 14.0),
 				"%d歳" % a, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size_sm, label_col)
 
+	# ─── 予測線（緑破線）───
+	var predict_col := Color(0.40, 0.90, 0.55, 0.85)
+	if predicted_height > 0.0 and n >= 1:
+		var last_pt: Vector2 = _get_pt(n - 1, "height", min_h, h_range, gw, gh)
+		# 予測点のX座標: predicted_age を最右端に配置
+		var _last_age: int = int(data[n - 1].get("age", 6))
+		var age_span: float = maxf(float(predicted_age - int(data[0].get("age", 6))), 1.0)
+		var pred_x: float = ML + gw * float(predicted_age - int(data[0].get("age", 6))) / age_span
+		var pred_yn: float = clampf((predicted_height - min_h) / maxf(h_range, 1.0), 0.0, 1.0)
+		var pred_y: float = MT + gh * (1.0 - pred_yn)
+		var pred_pt := Vector2(pred_x, pred_y)
+		draw_dashed_line(last_pt, pred_pt, predict_col, 1.5, 6.0)
+		# 予測ドット（菱形）
+		var d_size: float = 4.0
+		var diamond := PackedVector2Array([
+			pred_pt + Vector2(0, -d_size), pred_pt + Vector2(d_size, 0),
+			pred_pt + Vector2(0, d_size), pred_pt + Vector2(-d_size, 0),
+		])
+		draw_colored_polygon(diamond, predict_col)
+		# 予測値ラベル
+		draw_string(font, Vector2(pred_pt.x - 20.0, pred_pt.y - 8.0),
+			"%.0fcm?" % predicted_height,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, font_size_sm, predict_col)
+		# X軸に予測年齢ラベル
+		draw_string(font, Vector2(pred_pt.x - 12.0, MT + gh + 14.0),
+			"%d歳" % predicted_age, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size_sm, predict_col)
+
 	# ─── 凡例 ───
-	var lx: float = ML + gw - 108.0
+	var has_prediction: bool = predicted_height > 0.0
+	var legend_width: float = 108.0 if not has_prediction else 108.0
+	var lx: float = ML + gw - legend_width
 	var ly: float = MT + 8.0
 	draw_line(Vector2(lx, ly), Vector2(lx + 18.0, ly), player_col, 2.0)
 	draw_circle(Vector2(lx + 9.0, ly), 3.0, player_col)
@@ -116,3 +150,7 @@ func _draw() -> void:
 	draw_dashed_line(Vector2(lx, ly + 18.0), Vector2(lx + 18.0, ly + 18.0), avg_col, 1.5, 8.0)
 	draw_string(font, Vector2(lx + 23.0, ly + 23.0), "同学年平均",
 		HORIZONTAL_ALIGNMENT_LEFT, -1, font_size_md, avg_col)
+	if has_prediction:
+		draw_dashed_line(Vector2(lx, ly + 36.0), Vector2(lx + 18.0, ly + 36.0), predict_col, 1.5, 6.0)
+		draw_string(font, Vector2(lx + 23.0, ly + 41.0), "予測",
+			HORIZONTAL_ALIGNMENT_LEFT, -1, font_size_md, predict_col)

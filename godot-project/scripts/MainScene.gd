@@ -98,6 +98,18 @@ var _edge_transition_running: bool = false
 var _last_soft_limit_notice_key: String = ""
 var _crouch_impossible_notified: bool = false
 var _crouch_impossible_suppress_timer: float = 0.0
+const ACTIONS_HUD_UPDATE_INTERVAL_SEC := 0.15
+const UI_UPDATE_INTERVAL_SEC := 0.20
+const BUBBLE_UPDATE_INTERVAL_SEC := 0.08
+const MINIMAP_UPDATE_INTERVAL_SEC := 0.08
+const ACTION_HINT_UPDATE_INTERVAL_SEC := 0.12
+const CROUCH_IMPOSSIBLE_CHECK_INTERVAL_SEC := 0.20
+var _actions_hud_update_elapsed: float = ACTIONS_HUD_UPDATE_INTERVAL_SEC
+var _ui_update_elapsed: float = UI_UPDATE_INTERVAL_SEC
+var _bubble_update_elapsed: float = BUBBLE_UPDATE_INTERVAL_SEC
+var _minimap_update_elapsed: float = MINIMAP_UPDATE_INTERVAL_SEC
+var _action_hint_update_elapsed: float = ACTION_HINT_UPDATE_INTERVAL_SEC
+var _crouch_check_elapsed: float = CROUCH_IMPOSSIBLE_CHECK_INTERVAL_SEC
 
 const CAMERA_FOOT_MARGIN_PX := 66.0
 const CAMERA_TOP_PIN_MARGIN_PX := 0.0
@@ -193,7 +205,8 @@ const TERM_HOTSPOTS: Dictionary = {
 		"prompt": "保健室で相談する",
 		"dialogue_npc": "player",
 		"dialogue_key": "term_school_infirmary",
-		"pose": "taiiku_suwari"
+		"pose": "taiiku_suwari",
+		"repeatable": true
 	},
 	"station_bench": {
 		"stage_id": "station",
@@ -833,6 +846,18 @@ func _try_show_randoseru_bubble(px: float, player_height_cm: float, hit_dist: fl
 			dist = px - ox2
 		if dist >= hit_dist:
 			return false
+		# 本棚の方が近い場合は本棚を優先（ランドセルを無視）
+		for obs_child in get_children():
+			if obs_child.has_meta("is_stage_obj") and obs_child.has_meta("obs_id") and obs_child.has_meta("obs_x"):
+				if String(obs_child.get_meta("obs_id")) == "bookshelf":
+					var bs_x1 := float(obs_child.get_meta("obs_x"))
+					var bs_x2 := float(obs_child.get_meta("obs_x2"))
+					var bs_dist := 0.0
+					if px < bs_x1: bs_dist = bs_x1 - px
+					elif px > bs_x2: bs_dist = px - bs_x2
+					if bs_dist < dist:
+						return false
+					break
 		_nearby_npc = null
 		_nearby_transition_door = ""
 		_nearby_height_scale = false
@@ -1302,6 +1327,14 @@ func _trigger_term_hotspot(hotspot_id: String) -> void:
 	if already_done:
 		dialogue_npc = String(hotspot_data.get("repeat_dialogue_npc", dialogue_npc))
 		dialogue_key = String(hotspot_data.get("repeat_dialogue_key", ""))
+	if hotspot_id == "school_infirmary":
+		var had_growth_pain: bool = global.has_method("is_growth_pain_active") and bool(global.is_growth_pain_active())
+		if global.has_method("cure_growth_pain"):
+			global.cure_growth_pain()
+		_update_actions_hud()
+		if had_growth_pain:
+			_start_dialogue("nurse", "growth_pain_cure")
+			return
 	if dialogue_key != "":
 		_start_dialogue(dialogue_npc, dialogue_key)
 	elif pose_name != "" and pose_name != "chair_sit":
@@ -1560,7 +1593,7 @@ func _end_dialogue() -> void:
 			n.z_index = -1
 	_sit_front_nodes.clear()
 
-	if _current_dialogue_npc == "haruka" and _current_dialogue_key == "measure_invite":
+	if _current_dialogue_npc == "haruka" and _current_dialogue_key.begins_with("measure_invite"):
 		if global:
 			global.haruka_following = true
 		for child in get_children():
@@ -1582,6 +1615,7 @@ func _end_dialogue() -> void:
 	elif _current_dialogue_npc == "haruka" and _current_dialogue_key == "height_check_invite":
 		if global:
 			global.height_measured_this_term = true
+			global.haruka_following = true
 			global.current_stage_id = "infirmary"
 		await _load_stage()
 	elif _current_dialogue_npc == "nurse" and _current_dialogue_key == "measurement_in_progress":
@@ -1934,20 +1968,46 @@ func _on_screenshot_failed(result: Dictionary) -> void:
 
 
 func _process(delta: float) -> void:
-	_update_actions_hud()
-	_update_ui()
-	_update_bubble()
+	_actions_hud_update_elapsed += delta
+	if _actions_hud_update_elapsed >= ACTIONS_HUD_UPDATE_INTERVAL_SEC:
+		_actions_hud_update_elapsed = 0.0
+		_update_actions_hud()
+
+	_ui_update_elapsed += delta
+	if _ui_update_elapsed >= UI_UPDATE_INTERVAL_SEC:
+		_ui_update_elapsed = 0.0
+		_update_ui()
+
+	_bubble_update_elapsed += delta
+	if _bubble_update_elapsed >= BUBBLE_UPDATE_INTERVAL_SEC:
+		_bubble_update_elapsed = 0.0
+		_update_bubble()
+	if bubble_panel and bubble_panel.visible and player:
+		bubble_panel.position = _get_bubble_screen_pos()
+
 	_update_minimap()
+
 	_update_bump_alert(delta)
 	_update_mood_feedback(delta)
 	_update_stage_title(delta)
+
 	if action_hint_label and action_hint_panel and action_hint_panel.visible:
-		action_hint_label.text = _get_action_hint_text()
+		_action_hint_update_elapsed += delta
+		if _action_hint_update_elapsed >= ACTION_HINT_UPDATE_INTERVAL_SEC:
+			_action_hint_update_elapsed = 0.0
+			action_hint_label.text = _get_action_hint_text()
+	else:
+		_action_hint_update_elapsed = ACTION_HINT_UPDATE_INTERVAL_SEC
+
 	_check_edge_transition()
 	if _crouch_impossible_suppress_timer > 0.0:
 		_crouch_impossible_suppress_timer -= delta
+		_crouch_check_elapsed = CROUCH_IMPOSSIBLE_CHECK_INTERVAL_SEC
 	else:
-		_check_crouch_impossible()
+		_crouch_check_elapsed += delta
+		if _crouch_check_elapsed >= CROUCH_IMPOSSIBLE_CHECK_INTERVAL_SEC:
+			_crouch_check_elapsed = 0.0
+			_check_crouch_impossible()
 
 func _check_crouch_impossible() -> void:
 	if not player or _edge_transition_running or _in_dialogue:
@@ -2583,7 +2643,7 @@ func _on_fast_travel_pressed(stage_id: String) -> void:
 		return
 	_toggle_pause()
 	global.current_stage_id = resolved_stage_id
-	global.actions_today += 1
+	_consume_action(global)
 	_update_actions_hud()
 	_load_stage()
 	# myroomへのファストトラベル: ベッド(x=30〜230cm)を避けてスポーン
@@ -2731,6 +2791,10 @@ func _run_sleep_transition() -> void:
 	var global = get_node_or_null("/root/Global")
 	if not global:
 		return
+	var was_growth_pain_active: bool = global.has_method("is_growth_pain_active") and bool(global.is_growth_pain_active())
+	var apply_growth_pain_after_sleep: bool = false
+	var growth_pain_duration: int = 3
+	var cured_growth_pain_by_rest: bool = false
 	var fade = ColorRect.new()
 	fade.color = Color(0, 0, 0, 0)
 	fade.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -2747,12 +2811,20 @@ func _run_sleep_transition() -> void:
 		if intense:
 			pain_key = "growing_pain_sleep_intense"
 			global.set_meta("growth_pain_intense", false)
+			growth_pain_duration = 5
 		else:
 			pain_key = "growing_pain_sleep"
+			growth_pain_duration = 3
 		global.growth_pain_pending = false
+		apply_growth_pain_after_sleep = true
 		_in_sleep_dialogue_wait = true
 		_start_dialogue("narrator", pain_key)
 		await _wait_for_dialogue_end()
+	if apply_growth_pain_after_sleep and global.has_method("apply_growth_pain"):
+		global.apply_growth_pain(growth_pain_duration)
+	elif was_growth_pain_active and global.has_method("cure_growth_pain"):
+		global.cure_growth_pain()
+		cured_growth_pain_by_rest = true
 	var target_stage_id: String = _resolve_stage_id(_sleep_return_stage_id)
 	if not StageBuilder.STAGES.has(target_stage_id):
 		target_stage_id = "myroom"
@@ -2774,6 +2846,8 @@ func _run_sleep_transition() -> void:
 	_sleep_return_stage_id = "myroom"
 	_sleep_return_position_cm = 260.0
 	_update_actions_hud()
+	if cured_growth_pain_by_rest:
+		_show_mood_feedback("休んだら成長痛が和らいだ", true)
 	var tw_out = create_tween()
 	tw_out.tween_property(fade, "color:a", 0.0, 0.45)
 	await tw_out.finished
@@ -2832,6 +2906,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.keycode == KEY_G:
 			_toggle_history_panel()
 		elif event.keycode == KEY_E:
+			_update_bubble()
 			var _interaction_global = get_node_or_null("/root/Global")
 			if _in_dialogue:
 				if _choice_pending:
@@ -2964,6 +3039,14 @@ func _on_skip_term_pressed() -> void:
 		player.call("update_measurements")
 	_load_stage()
 
+func _consume_action(global: Node, amount: int = 1) -> void:
+	if global == null or amount <= 0:
+		return
+	global.actions_today += amount
+	if global.has_method("tick_growth_pain"):
+		for _i in range(amount):
+			global.tick_growth_pain()
+
 func _update_actions_hud() -> void:
 	if not action_label:
 		return
@@ -3005,9 +3088,7 @@ func _update_ui():
 			stage_title_label.show()
 	var m = player.get("m")
 	if not m: return
-	
-	var params = global.current_params if global else m
-	
+
 	var age_val: int = global.age if global else 0
 	var term_val: int = global.term if global else 0
 	var text = "【基本情報】\n"
@@ -3020,7 +3101,6 @@ func _update_ui():
 	var confidence_val: int = global.self_confidence if global else 0
 	var complex_val: int = global.self_complex if global else 0
 	text += "気持ち: 受容 %d / 戸惑い %d\n" % [confidence_val, complex_val]
-	text += "身長: %.1f cm  頭身: %.1f  股下: %.1f%%\n" % [params["height"], params["ratio"], params["legRatio"]]
 	text += "Pose: %s ([1]-[5], [S]キー)\n" % player.pose
 	
 	text += "\n【操作方法】\n"
@@ -3246,6 +3326,12 @@ func _load_stage():
 	_sync_randoseru_stage_object_visibility()
 	_bind_edge_triggers()
 	_spawn_npcs(stage_id)
+	_actions_hud_update_elapsed = ACTIONS_HUD_UPDATE_INTERVAL_SEC
+	_ui_update_elapsed = UI_UPDATE_INTERVAL_SEC
+	_bubble_update_elapsed = BUBBLE_UPDATE_INTERVAL_SEC
+	_minimap_update_elapsed = MINIMAP_UPDATE_INTERVAL_SEC
+	_action_hint_update_elapsed = ACTION_HINT_UPDATE_INTERVAL_SEC
+	_crouch_check_elapsed = CROUCH_IMPOSSIBLE_CHECK_INTERVAL_SEC
 	# 天井のあるステージへの遷移直後は詰まり判定を抑制する（awaitより前に設定する必要がある）
 	var loaded_ceiling = StageBuilder.STAGES.get(stage_id, {}).get("ceiling_height", null)
 	if loaded_ceiling != null:
@@ -3421,11 +3507,11 @@ func _enter_edge_transition(target_stage: String) -> void:
 	var from_stage_id: String = String(global.current_stage_id)
 	_edge_transition_running = true
 	global.current_stage_id = resolved_target
-	global.actions_today += 1
+	_consume_action(global)
 	_nearby_bed = false
 	_nearby_tent_rest = false
 	_update_actions_hud()
-	_load_stage()
+	await _load_stage()
 	if player:
 		var stage_width = float(StageBuilder.STAGES[resolved_target]["width"])
 		var spawn_x = 80.0
@@ -3441,6 +3527,13 @@ func _enter_edge_transition(target_stage: String) -> void:
 			spawn_x = stage_width - 260.0  # 駅右側に到着
 		player.position = Vector2(spawn_x * p, 0)
 	_edge_transition_running = false
+	# ランダム睡眠チェック（成長期の眠気）— 屋外系ステージのみ
+	if resolved_target in ["outdoor", "park", "adjacent_town"] \
+			and global and not _in_dialogue and not _in_sleep_dialogue_wait \
+			and randf() < GROWTH_SLEEP_CHANCE:
+		# カメラがプレイヤーに追従するまで待つ
+		await get_tree().create_timer(0.3).timeout
+		_start_dialogue("narrator", "growth_sleep_warning")
 
 func _get_entrance_dialogue_key(age: int) -> String:
 	if age <= 6:
@@ -3766,13 +3859,13 @@ func _enter_transition_door() -> void:
 	if global:
 		from_stage_id = global.current_stage_id
 		global.current_stage_id = new_stage_id
-		global.actions_today += 1
+		_consume_action(global)
 		_update_actions_hud()
 
 	_nearby_transition_door = ""
 	_nearby_bed = false
 	_nearby_tent_rest = false
-	_load_stage()
+	await _load_stage()
 
 	# 遷移先の「戻り口ドア」の近くにスポーン
 	if player and from_stage_id != "" and StageBuilder.STAGES.has(new_stage_id):
@@ -3798,6 +3891,13 @@ func _enter_transition_door() -> void:
 		# station には door_to_platform を置かない設計なので、platform から戻る時は右側に出す
 		if not spawned and new_stage_id == "station" and from_stage_id == "platform":
 			player.position = Vector2((stage_width - 260.0) * p, 0)
+	# ランダム睡眠チェック（成長期の眠気）— 屋外系ステージのみ
+	if new_stage_id in ["outdoor", "park", "adjacent_town"] \
+			and global and not _in_dialogue and not _in_sleep_dialogue_wait \
+			and randf() < GROWTH_SLEEP_CHANCE:
+		# カメラがプレイヤーに追従するまで待つ
+		await get_tree().create_timer(0.3).timeout
+		_start_dialogue("narrator", "growth_sleep_warning")
 
 # ─── 成長システム ───────────────────────────────────────────────
 
@@ -3972,9 +4072,15 @@ func _show_measurement_result(return_to_myroom: bool = false, animate: bool = fa
 	var diff_avg: float = h - avg_h
 	var diff_prev: float = h - prev_h if prev_h > 0.0 else 0.0
 
+	# 予測身長の算出
+	var predicted: float = global.predict_final_height(18)
+
 	# 詳細テキスト（後でフェードイン）
 	var detail = "年齢：%d歳  %s\n" % [a, Global.get_school_term_label(a, global.term)]
-	detail += "同学年平均：%.1f cm  （差：%+.1f cm）\n\n" % [avg_h, diff_avg]
+	detail += "同学年平均：%.1f cm  （差：%+.1f cm）\n" % [avg_h, diff_avg]
+	if predicted > 0.0 and a < 18:
+		detail += "予測最終身長（18歳）：%.1f cm\n" % predicted
+	detail += "\n"
 	detail += global.get_measurement_comment(diff_avg)
 	detail += "\n\n【今学期の手触り】\n"
 	if global.term_memory_note != "":
@@ -3999,6 +4105,9 @@ func _show_measurement_result(return_to_myroom: bool = false, animate: bool = fa
 
 	# 学期末測定のみ成長演出。任意測定は現在値をそのまま表示する。
 	if _meas_graph:
+		# 予測線データをグラフに渡す
+		_meas_graph.predicted_height = -1.0
+		_meas_graph.predicted_age = 18
 		if animate_growth:
 			var preview = global.growth_history.duplicate()
 			preview.append({

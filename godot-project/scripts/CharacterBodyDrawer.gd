@@ -189,31 +189,73 @@ static func _build_side_jumper_chair_skirt_quad(ctx: DrawContext, belt_back: Vec
 		min(crotch_pos.x - thigh_cover * 0.82, belt_back.x - thigh_cover * 0.28),
 		max(crotch_pos.y + thigh_cover * 0.88, belt_back.y + skirt_length * 0.72)
 	)
-	var front_limit_y = front_ankle.y - shin_cover * 0.4
-	var front_floor_y = front_knee.y + max(thigh_cover * 0.55, 8.0)
-	var front_target_y = max(front_knee.y + 6.0, front_floor_y)
-	if front_limit_y > front_knee.y + 6.0:
-		front_target_y = clamp(front_floor_y, front_knee.y + 6.0, front_limit_y)
-	var knee_cover_x = front_knee.x + max(shin_cover * 0.95, thigh_cover * 0.65, 10.0)
-	var knee_ratio = clamp((front_knee.y - belt_front.y) / max(front_target_y - belt_front.y, 1.0), 0.18, 0.92)
-	var required_front_hem_x = belt_front.x + (knee_cover_x - belt_front.x) / knee_ratio
-	var front_cap_x = max(front_ankle.x + max(shin_cover * 1.6, thigh_cover * 1.15), knee_cover_x + thigh_cover * 1.1)
-	var front_target = Vector2(
-		min(max(required_front_hem_x, belt_front.x + 8.0), front_cap_x),
-		front_target_y
-	)
+	var front_limit_y = front_ankle.y - shin_cover * 0.22
+	var front_floor_y = front_knee.y + max(thigh_cover * 0.8, shin_cover * 0.42, 10.0)
+	var knee_clear_y = front_knee.y + max(thigh_cover * 0.2, 8.0)
+	var front_target_y = max(knee_clear_y, front_floor_y)
+	if front_limit_y > knee_clear_y:
+		front_target_y = clamp(front_floor_y, knee_clear_y, front_limit_y)
+	var knee_cover_x = front_knee.x + max(shin_cover * 1.18, thigh_cover * 0.95, 12.0)
+	var shin_cover_x = front_ankle.x + max(shin_cover * 0.55, thigh_cover * 0.4, 7.0)
+	var front_cover_x = max(knee_cover_x, shin_cover_x)
+	var front_cap_x = max(front_ankle.x + max(shin_cover * 1.45, thigh_cover * 1.1), front_cover_x + thigh_cover * 0.82)
 
 	var back_dir = _normalized_or(back_target - belt_back, Vector2(-0.25, 1.0))
-	var front_dir = _normalized_or(front_target - belt_front, Vector2(0.85, 1.0))
+	var front_dir = _normalized_or(Vector2(front_cover_x, front_target_y) - belt_front, Vector2(0.85, 1.0))
 	# 座り時も布の前後辺長は立ち時のスカート丈と同じに保ち、下端の回転で形を作る。
 	var side_len = skirt_length
+	var front_len = side_len
 	var back_hem = belt_back + back_dir * side_len
-	var front_hem = belt_front + front_dir * side_len
+	var front_hem = belt_front + front_dir * front_len
+	# スカート裾が膝を覆うよう保証（裾が膝より上になる場合にY座標を補正）
+	if front_hem.y < front_target_y:
+		front_hem.y = front_target_y
+	var front_peak_min_y = belt_front.y + max(thigh_cover * 0.45, 8.0)
+	var front_peak_max_y = max(front_peak_min_y, front_hem.y - max(thigh_cover * 0.45, 10.0))
+	var front_peak_y = clamp(
+		front_knee.y - max(thigh_cover * 0.55, 12.0),
+		front_peak_min_y,
+		front_peak_max_y
+	)
+	var front_peak_min_x = belt_front.x + max(thigh_cover * 0.55, 7.0)
+	var front_peak_max_x = max(front_peak_min_x, front_hem.x - max(shin_cover * 0.18, 2.0))
+	var front_peak_x = clamp(
+		max(front_knee.x + max(thigh_cover * 0.9, 11.0), belt_front.x + max(thigh_cover * 1.2, 14.0)),
+		front_peak_min_x,
+		front_peak_max_x
+	)
+	var front_peak = Vector2(front_peak_x, front_peak_y)
+	var fixed_peak_max_y = max(front_peak_min_y, front_target_y - max(thigh_cover * 0.2, 6.0))
+	var fixed_peak_y = clamp(
+		front_knee.y - max(thigh_cover * 0.42, 9.0),
+		front_peak_min_y,
+		fixed_peak_max_y
+	)
+	var fixed_peak_max_x = max(front_peak_min_x, front_cover_x - max(shin_cover * 0.26, 3.0))
+	var fixed_peak_target_x = clamp(
+		max(front_knee.x + max(thigh_cover * 0.68, 9.0), belt_front.x + max(thigh_cover * 0.95, 11.0)),
+		front_peak_min_x,
+		fixed_peak_max_x
+	)
+	var fixed_peak_target = Vector2(fixed_peak_target_x, fixed_peak_y)
+	var fixed_peak_len = min(side_len * 0.56, belt_front.distance_to(fixed_peak_target))
+	front_peak = belt_front + _normalized_or(fixed_peak_target - belt_front, front_dir) * fixed_peak_len
+	var remaining_front_len = max(side_len - belt_front.distance_to(front_peak), max(shin_cover * 0.8, 9.0))
+	var required_front_drop = clamp(front_target_y - front_peak.y, 0.0, max(remaining_front_len - 0.5, 0.0))
+	var max_front_dx = sqrt(max(remaining_front_len * remaining_front_len - required_front_drop * required_front_drop, 0.0))
+	var front_hem_min_x = front_peak.x + max(shin_cover * 0.2, 2.0)
+	var front_hem_max_x = max(front_hem_min_x, min(front_cap_x, front_peak.x + max_front_dx))
+	var desired_front_x = max(front_cover_x, front_peak.x + max_front_dx * 0.92)
+	var front_hem_x = clamp(desired_front_x, front_hem_min_x, front_hem_max_x)
+	var actual_front_dx = max(front_hem_x - front_peak.x, 0.0)
+	var actual_front_drop = sqrt(max(remaining_front_len * remaining_front_len - actual_front_dx * actual_front_dx, 0.0))
+	front_hem = Vector2(front_peak.x + actual_front_dx, front_peak.y + actual_front_drop)
 
 	return {
 		"back_hem": back_hem,
 		"front_hem": front_hem,
-		"points": PackedVector2Array([belt_back, back_hem, front_hem, belt_front]),
+		"front_peak": front_peak,
+		"points": PackedVector2Array([belt_back, back_hem, front_hem, front_peak, belt_front]),
 	}
 
 static func _normalized_or(v: Vector2, fallback: Vector2) -> Vector2:
@@ -493,6 +535,7 @@ static func draw_skirt(ctx: DrawContext, bottoms_type: String, bottoms_color: Co
 			var chair_quad = _build_side_jumper_chair_skirt_quad(ctx, belt_back, belt_front, crotch_pos, knee_l, knee_r, ankle_l, ankle_r, skirt_length)
 			var chair_back_hem: Vector2 = chair_quad["back_hem"]
 			var chair_front_hem: Vector2 = chair_quad["front_hem"]
+			var chair_front_peak: Vector2 = chair_quad["front_peak"]
 			var chair_pts: PackedVector2Array = chair_quad["points"]
 			ctx.canvas.draw_polygon(chair_pts, PackedColorArray([bottoms_color]))
 
@@ -503,6 +546,10 @@ static func draw_skirt(ctx: DrawContext, bottoms_type: String, bottoms_color: Co
 				var bot_p = chair_back_hem.lerp(chair_front_hem, t)
 				var center_drop = max(ctx.thigh_w * 0.18, 4.0) * (1.0 - abs(t - 0.5) * 2.0)
 				var mid_p = top_p.lerp(bot_p, 0.55) + Vector2(0, center_drop)
+				if t > 0.42:
+					var front_blend = clamp((t - 0.42) / 0.58, 0.0, 1.0)
+					var peak_mid = top_p.lerp(chair_front_peak.lerp(bot_p, 0.4), 0.72)
+					mid_p = mid_p.lerp(peak_mid, front_blend * 0.75)
 				ctx.canvas.draw_polyline(PackedVector2Array([top_p, mid_p, bot_p]), pleat_col, 1.5)
 
 			var belt_color = bottoms_color.darkened(0.35)

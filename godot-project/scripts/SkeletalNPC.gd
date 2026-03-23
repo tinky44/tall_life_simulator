@@ -14,6 +14,11 @@ const GENERIC_PASSIVE_COOLDOWN := 6.0
 const NAMED_GREET_TRIGGER_SEC := 2.0
 const NAMED_GREET_DURATION := 2.6
 const NAMED_GREET_COOLDOWN := 5.0
+const REDRAW_MIN_INTERVAL_SEC := 0.0
+const IDLE_REDRAW_INTERVAL_SEC := 0.30
+const REDRAW_HEIGHT_EPS_CM := 0.03
+const REDRAW_ANGLE_EPS := 0.003
+const REDRAW_PITCH_EPS := 0.06
 const GENERIC_PASSIVE_LINES := {
 	"default": {
 		"tall": [
@@ -141,6 +146,7 @@ var follow_target: Node2D = null # セットされると追随モードになる
 var look_pitch: float = 0.0
 var look_head_angle: float = 0.0
 var _reaction_label: Label = null
+var _height_label: Label = null
 var _current_reaction_key: String = ""
 var _reaction_time_left: float = 0.0
 var _avoid_dir: float = 0.0
@@ -151,6 +157,8 @@ var _greet_triggered_for_approach: bool = false
 var _last_greet_index: int = -1
 var _last_generic_callout_text: String = ""
 var _player_is_close: bool = false
+var _redraw_elapsed_sec: float = REDRAW_MIN_INTERVAL_SEC
+var _last_draw_signature: Dictionary = {}
 
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 @onready var character_drawer: Node2D = $CharacterDrawer
@@ -233,6 +241,19 @@ func _ready() -> void:
 	_reaction_label.z_index = 100
 	add_child(_reaction_label)
 
+	_height_label = Label.new()
+	_height_label.text = ""
+	_height_label.add_theme_font_size_override("font_size", 14)
+	_height_label.add_theme_color_override("font_color", Color(0.9, 0.95, 1.0))
+	_height_label.add_theme_color_override("font_outline_color", Color(0.1, 0.15, 0.2, 0.9))
+	_height_label.add_theme_constant_override("outline_size", 4)
+	_height_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_height_label.position = Vector2(-60, -100)
+	_height_label.size = Vector2(120, 30)
+	_height_label.z_index = 100
+	_height_label.visible = false
+	add_child(_height_label)
+
 func _process(delta: float) -> void:
 	var p_node: Node2D = get_parent().get_node_or_null("Player") as Node2D
 	if not p_node:
@@ -257,7 +278,12 @@ func _process(delta: float) -> void:
 
 	_update_look_towards_player(delta, p_node, player_m, abs_dist, dist_x)
 
-	_reaction_label.position.y = - (visual_height_cm * CM_TO_PX) - 40.0
+	var label_top_y: float = - (visual_height_cm * CM_TO_PX) - 40.0
+	_reaction_label.position.y = label_top_y
+	_height_label.position.y = label_top_y - 28.0
+	_height_label.text = "%.0f cm" % visual_height_cm
+	_height_label.visible = true
+
 	if npc_id == "":
 		_process_generic_reaction(delta, player_m, dist_x)
 	else:
@@ -300,7 +326,7 @@ func _physics_process(delta: float) -> void:
 	_update_visual_height(delta)
 	_update_collision()
 	move_and_slide()
-	character_drawer.queue_redraw()
+	_queue_redraw_if_needed(delta)
 
 func _update_look_towards_player(
 	delta: float,
@@ -415,10 +441,11 @@ func update_measurements() -> void:
 
 	appearance = custom_appearance.duplicate(true)
 	visual_height_cm = m["height"]
+	_reset_redraw_tracking()
 
 	_update_collision()
 	if character_drawer:
-		character_drawer.queue_redraw()
+		_queue_redraw_if_needed(REDRAW_MIN_INTERVAL_SEC, true)
 
 func _update_visual_height(delta: float) -> void:
 	visual_height_cm = lerp(visual_height_cm, float(m["height"]), 15.0 * delta)
@@ -429,6 +456,69 @@ func _update_collision() -> void:
 	if shape:
 		shape.height = max(40.0, h_px)
 		collision_shape.position.y = - h_px / 2.0
+
+func _reset_redraw_tracking() -> void:
+	_redraw_elapsed_sec = REDRAW_MIN_INTERVAL_SEC
+	_last_draw_signature.clear()
+
+func _queue_redraw_if_needed(delta: float, force: bool = false) -> void:
+	if character_drawer == null:
+		return
+
+	_redraw_elapsed_sec += maxf(delta, 0.0)
+	var signature: Dictionary = _capture_draw_signature()
+
+	if force:
+		_last_draw_signature = signature
+		character_drawer.queue_redraw()
+		_redraw_elapsed_sec = 0.0
+		return
+
+	var changed: bool = _has_significant_redraw_change(signature)
+	if changed:
+		if _redraw_elapsed_sec < REDRAW_MIN_INTERVAL_SEC:
+			return
+	else:
+		if _redraw_elapsed_sec < IDLE_REDRAW_INTERVAL_SEC:
+			return
+
+	_last_draw_signature = signature
+	character_drawer.queue_redraw()
+	_redraw_elapsed_sec = 0.0
+
+func _capture_draw_signature() -> Dictionary:
+	return {
+		"pose": pose,
+		"facing": facing,
+		"dir": dir,
+		"is_walking": is_walking,
+		"walk_phase": walk_phase,
+		"visual_height_cm": visual_height_cm,
+		"look_head_angle": look_head_angle,
+		"look_pitch": look_pitch,
+	}
+
+func _has_significant_redraw_change(signature: Dictionary) -> bool:
+	if _last_draw_signature.is_empty():
+		return true
+	if signature.get("pose", "") != _last_draw_signature.get("pose", ""):
+		return true
+	if signature.get("facing", "") != _last_draw_signature.get("facing", ""):
+		return true
+	if int(signature.get("dir", 0)) != int(_last_draw_signature.get("dir", 0)):
+		return true
+	if bool(signature.get("is_walking", false)) != bool(_last_draw_signature.get("is_walking", false)):
+		return true
+	if abs(float(signature.get("visual_height_cm", 0.0)) - float(_last_draw_signature.get("visual_height_cm", 0.0))) > REDRAW_HEIGHT_EPS_CM:
+		return true
+	if abs(float(signature.get("look_head_angle", 0.0)) - float(_last_draw_signature.get("look_head_angle", 0.0))) > REDRAW_ANGLE_EPS:
+		return true
+	if abs(float(signature.get("look_pitch", 0.0)) - float(_last_draw_signature.get("look_pitch", 0.0))) > REDRAW_PITCH_EPS:
+		return true
+	if bool(signature.get("is_walking", false)):
+		if abs(float(signature.get("walk_phase", 0.0)) - float(_last_draw_signature.get("walk_phase", 0.0))) > REDRAW_ANGLE_EPS:
+			return true
+	return false
 
 func _mock_measurements() -> Dictionary:
 	var h = 158.0
@@ -477,6 +567,8 @@ func _reset_proximity_state() -> void:
 	_player_is_close = false
 	_proximity_time = 0.0
 	_greet_triggered_for_approach = false
+	if _height_label:
+		_height_label.visible = false
 
 func _show_reaction_text(text: String, duration: float) -> void:
 	_reaction_label.text = text

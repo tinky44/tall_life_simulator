@@ -255,6 +255,14 @@ const DATA: Dictionary = {
 			{"speaker": "保健の先生", "text": "靴を脱いで、この上に乗ってね。慌てなくて大丈夫よ。"},
 			{"speaker": "保健の先生", "text": "うん、そのまま。じょうずにできてるわ。"},
 		],
+		"growth_pain_cure": [
+			{"speaker": "保健の先生", "text": "脚の痛みは成長のサインでもあるけれど、今日はしっかり休んでおこうね。"},
+			{"speaker": "保健の先生", "text": "これで無理しなければ大丈夫。動きは少しずつ戻るはずよ。"},
+		],
+		"growth_pain_cure_elementary": [
+			{"speaker": "保健の先生", "text": "あしのいたみ、よくがまんしたね。きょうはゆっくりやすもう。"},
+			{"speaker": "保健の先生", "text": "だいじょうぶ、むりしなければすぐらくになるよ。"},
+		],
 	},
 	"player": {
 		"too_big_for_house": [

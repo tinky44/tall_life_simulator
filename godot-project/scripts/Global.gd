@@ -53,6 +53,7 @@ var recorded_height: float = 0.0           # 最後に保健室で測定した�
 var height_measured_this_term: bool = false # 今学期のはるか誘導が発火済みか
 var bonus_growth_cm: float = 0.0           # 牛乳・サプリ・睡眠ブーストで積んだ追加成長（学期変わりに適用）
 var growth_pain_pending: bool = false      # ミシミシ演出を次の就寝時に出すフラグ（急成長イベント時のみ立てる）
+var growth_pain_actions: int = 0           # 成長痛デバフの残りアクション数（0なら正常）
 var growth_history: Array = []
 
 var active_companion_id: String = "" # 現在同行しているNPCのID
@@ -272,6 +273,24 @@ func record_growth_history(source: String = "measurement") -> void:
 		"diff_prev": diff_prev,
 		"source": source
 	})
+
+# ─── 成長痛デバフ ─────────────────────────────────────────────
+## 成長痛デバフを開始する。duration はアクション数（デフォルト3回行動分）。
+func apply_growth_pain(duration: int = 3) -> void:
+	growth_pain_actions = maxi(growth_pain_actions, duration)
+
+## アクション消費時に呼ぶ。残り0になると自然回復。
+func tick_growth_pain() -> void:
+	if growth_pain_actions > 0:
+		growth_pain_actions -= 1
+
+## 保健室で即回復する。
+func cure_growth_pain() -> void:
+	growth_pain_actions = 0
+
+## 成長痛デバフ中かどうか。
+func is_growth_pain_active() -> bool:
+	return growth_pain_actions > 0
 
 # ─── イベントキュー ────────────────────────────────────────────
 var pending_events: Array = []
@@ -503,6 +522,31 @@ func advance_term() -> void:
 
 func get_avg_height(a: int) -> float:
 	return AVG_HEIGHT_FEMALE.get(clamp(a, 3, 18), 158.5)
+
+## 成長履歴から予測最終身長（18歳時点）を算出する。
+## 直近2回の測定データの成長速度を年間換算し、残り年数分を外挿する。
+## データが2つ未満の場合は -1.0 を返す（予測不能）。
+func predict_final_height(target_age: int = 18) -> float:
+	if growth_history.size() < 2:
+		return -1.0
+	var latest: Dictionary = growth_history[-1]
+	var prev: Dictionary = growth_history[-2]
+	var cur_age: int = int(latest.get("age", age))
+	if cur_age >= target_age:
+		return float(latest.get("height", current_params["height"]))
+	var cur_h: float = float(latest.get("height", current_params["height"]))
+	var prev_h_val: float = float(prev.get("height", cur_h))
+	var prev_age: int = int(prev.get("age", cur_age))
+	# 年齢差がない場合は学期差（1学期≒0.33年）で補間
+	var age_diff: float = float(cur_age - prev_age)
+	if age_diff < 0.5:
+		var term_diff: int = int(latest.get("term", term)) - int(prev.get("term", term))
+		age_diff = maxf(float(term_diff) / 3.0, 0.33)
+	var growth_per_year: float = (cur_h - prev_h_val) / maxf(age_diff, 0.33)
+	# 成長鈍化を加味: 残り年数の後半ほど減速する（簡易的に平均60%を掛ける）
+	var remaining_years: float = float(target_age - cur_age)
+	var deceleration: float = 0.6
+	return cur_h + growth_per_year * remaining_years * deceleration
 
 func get_measurement_comment(diff_avg: float) -> String:
 	if diff_avg > 50.0:
@@ -785,6 +829,7 @@ func save_slot(slot: int) -> void:
 	config.set_value(section, "height_measured_this_term", height_measured_this_term)
 	config.set_value(section, "bonus_growth_cm", bonus_growth_cm)
 	config.set_value(section, "growth_pain_pending", growth_pain_pending)
+	config.set_value(section, "growth_pain_actions", growth_pain_actions)
 	config.save(SLOTS_PATH)
 	current_slot = slot
 
@@ -809,6 +854,7 @@ func load_slot(slot: int) -> bool:
 	height_measured_this_term = bool(config.get_value(section, "height_measured_this_term", false))
 	bonus_growth_cm = float(config.get_value(section, "bonus_growth_cm", 0.0))
 	growth_pain_pending = bool(config.get_value(section, "growth_pain_pending", false))
+	growth_pain_actions = int(config.get_value(section, "growth_pain_actions", 0))
 	growth_factor = config.get_value(section, "growth_factor", 1.0)
 	growth_type = config.get_value(section, "growth_type", "normal")
 	growth_history = config.get_value(section, "growth_history", [])
