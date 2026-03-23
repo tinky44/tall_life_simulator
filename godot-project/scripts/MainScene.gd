@@ -98,6 +98,18 @@ var _edge_transition_running: bool = false
 var _last_soft_limit_notice_key: String = ""
 var _crouch_impossible_notified: bool = false
 var _crouch_impossible_suppress_timer: float = 0.0
+const ACTIONS_HUD_UPDATE_INTERVAL_SEC := 0.15
+const UI_UPDATE_INTERVAL_SEC := 0.20
+const BUBBLE_UPDATE_INTERVAL_SEC := 0.08
+const MINIMAP_UPDATE_INTERVAL_SEC := 0.08
+const ACTION_HINT_UPDATE_INTERVAL_SEC := 0.12
+const CROUCH_IMPOSSIBLE_CHECK_INTERVAL_SEC := 0.20
+var _actions_hud_update_elapsed: float = ACTIONS_HUD_UPDATE_INTERVAL_SEC
+var _ui_update_elapsed: float = UI_UPDATE_INTERVAL_SEC
+var _bubble_update_elapsed: float = BUBBLE_UPDATE_INTERVAL_SEC
+var _minimap_update_elapsed: float = MINIMAP_UPDATE_INTERVAL_SEC
+var _action_hint_update_elapsed: float = ACTION_HINT_UPDATE_INTERVAL_SEC
+var _crouch_check_elapsed: float = CROUCH_IMPOSSIBLE_CHECK_INTERVAL_SEC
 
 const CAMERA_FOOT_MARGIN_PX := 66.0
 const CAMERA_TOP_PIN_MARGIN_PX := 0.0
@@ -1934,20 +1946,46 @@ func _on_screenshot_failed(result: Dictionary) -> void:
 
 
 func _process(delta: float) -> void:
-	_update_actions_hud()
-	_update_ui()
-	_update_bubble()
+	_actions_hud_update_elapsed += delta
+	if _actions_hud_update_elapsed >= ACTIONS_HUD_UPDATE_INTERVAL_SEC:
+		_actions_hud_update_elapsed = 0.0
+		_update_actions_hud()
+
+	_ui_update_elapsed += delta
+	if _ui_update_elapsed >= UI_UPDATE_INTERVAL_SEC:
+		_ui_update_elapsed = 0.0
+		_update_ui()
+
+	_bubble_update_elapsed += delta
+	if _bubble_update_elapsed >= BUBBLE_UPDATE_INTERVAL_SEC:
+		_bubble_update_elapsed = 0.0
+		_update_bubble()
+	if bubble_panel and bubble_panel.visible and player:
+		bubble_panel.position = _get_bubble_screen_pos()
+
 	_update_minimap()
+
 	_update_bump_alert(delta)
 	_update_mood_feedback(delta)
 	_update_stage_title(delta)
+
 	if action_hint_label and action_hint_panel and action_hint_panel.visible:
-		action_hint_label.text = _get_action_hint_text()
+		_action_hint_update_elapsed += delta
+		if _action_hint_update_elapsed >= ACTION_HINT_UPDATE_INTERVAL_SEC:
+			_action_hint_update_elapsed = 0.0
+			action_hint_label.text = _get_action_hint_text()
+	else:
+		_action_hint_update_elapsed = ACTION_HINT_UPDATE_INTERVAL_SEC
+
 	_check_edge_transition()
 	if _crouch_impossible_suppress_timer > 0.0:
 		_crouch_impossible_suppress_timer -= delta
+		_crouch_check_elapsed = CROUCH_IMPOSSIBLE_CHECK_INTERVAL_SEC
 	else:
-		_check_crouch_impossible()
+		_crouch_check_elapsed += delta
+		if _crouch_check_elapsed >= CROUCH_IMPOSSIBLE_CHECK_INTERVAL_SEC:
+			_crouch_check_elapsed = 0.0
+			_check_crouch_impossible()
 
 func _check_crouch_impossible() -> void:
 	if not player or _edge_transition_running or _in_dialogue:
@@ -2832,6 +2870,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.keycode == KEY_G:
 			_toggle_history_panel()
 		elif event.keycode == KEY_E:
+			_update_bubble()
 			var _interaction_global = get_node_or_null("/root/Global")
 			if _in_dialogue:
 				if _choice_pending:
@@ -3246,6 +3285,12 @@ func _load_stage():
 	_sync_randoseru_stage_object_visibility()
 	_bind_edge_triggers()
 	_spawn_npcs(stage_id)
+	_actions_hud_update_elapsed = ACTIONS_HUD_UPDATE_INTERVAL_SEC
+	_ui_update_elapsed = UI_UPDATE_INTERVAL_SEC
+	_bubble_update_elapsed = BUBBLE_UPDATE_INTERVAL_SEC
+	_minimap_update_elapsed = MINIMAP_UPDATE_INTERVAL_SEC
+	_action_hint_update_elapsed = ACTION_HINT_UPDATE_INTERVAL_SEC
+	_crouch_check_elapsed = CROUCH_IMPOSSIBLE_CHECK_INTERVAL_SEC
 	# 天井のあるステージへの遷移直後は詰まり判定を抑制する（awaitより前に設定する必要がある）
 	var loaded_ceiling = StageBuilder.STAGES.get(stage_id, {}).get("ceiling_height", null)
 	if loaded_ceiling != null:

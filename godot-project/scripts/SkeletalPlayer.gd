@@ -44,6 +44,39 @@ var _camera_shake_active: bool = false
 # ポーズ遷移の補間用
 var smooth_d: Dictionary = {}
 const POSE_LERP_SPEED: float = 7.0
+const REDRAW_MIN_INTERVAL_SEC := 0.0
+const IDLE_REDRAW_INTERVAL_SEC := 0.30
+const REDRAW_STATE_HEIGHT_EPS_CM := 0.03
+const REDRAW_STATE_ANGLE_EPS := 0.003
+const REDRAW_STATE_PITCH_EPS := 0.06
+const REDRAW_POSE_EPS := {
+	"leg_l_angle": 0.08,
+	"leg_r_angle": 0.08,
+	"arm_l_angle": 0.08,
+	"arm_r_angle": 0.08,
+	"knee_l": 0.01,
+	"knee_r": 0.01,
+	"waist_angle": 0.01,
+	"y_crotch": 0.20,
+	"hy": 0.20,
+	"front_hy": 0.20,
+}
+const REDRAW_POSE_KEYS := ["leg_l_angle", "leg_r_angle", "arm_l_angle", "arm_r_angle", "knee_l", "knee_r"]
+
+var _ceiling_sensor_cached_frame: int = -1
+var _ceiling_sensor_colliding: bool = false
+var _ceiling_sensor_height_cm: float = INF
+
+var _redraw_elapsed_sec: float = REDRAW_MIN_INTERVAL_SEC
+var _last_draw_dir: int = 0
+var _last_draw_facing: String = ""
+var _last_draw_pose: String = ""
+var _last_draw_is_walking: bool = false
+var _last_draw_walk_phase: float = 0.0
+var _last_draw_visual_height_cm: float = 0.0
+var _last_draw_look_head_angle: float = 0.0
+var _last_draw_look_pitch: float = 0.0
+var _last_draw_pose_values: Dictionary = {}
 
 # 着席コンテキスト（-1 = 未設定、固定値にフォールバック）
 var sit_context: Dictionary = {
@@ -73,9 +106,11 @@ func update_measurements() -> void:
 	_setup_sensors()
 	_update_collision()
 	refresh_movement_tuning()
+	_reset_redraw_tracking()
+	_invalidate_ceiling_sensor_cache()
 
 	if character_drawer:
-		character_drawer.queue_redraw()
+		_queue_redraw_if_needed(REDRAW_MIN_INTERVAL_SEC, true)
 
 func refresh_movement_tuning() -> void:
 	if m == null or m.is_empty():
@@ -138,6 +173,8 @@ func _physics_process(delta: float) -> void:
 		velocity.y = JUMP_VELOCITY
 
 	_handle_input()
+	_handle_auto_crouch()
+	_update_visual_height(delta)
 
 	# 脚の痛みフラグによる速度補正
 	var _leg_pain_factor = 1.0
@@ -149,12 +186,11 @@ func _physics_process(delta: float) -> void:
 	var direction := Input.get_axis("ui_left", "ui_right")
 
 	# 屈み時は歩幅が短くなる分だけ移動速度を下げてスライド感を防ぐ
+	var crouch_analysis: Dictionary = {}
 	var crouch_speed_mult := 1.0
 	if pose == "normal" and not m.is_empty():
-		crouch_speed_mult = maxf(
-			CharacterPoseCalculator.get_crouch_stride_ratio(visual_height_cm, m, CM_TO_PX),
-			0.2
-		)
+		crouch_analysis = CharacterPoseCalculator.get_crouch_analysis(visual_height_cm, m, CM_TO_PX)
+		crouch_speed_mult = maxf(float(crouch_analysis.get("stride_ratio", 1.0)), 0.2)
 
 	if pose != "normal" or is_crouch_impossible:
 		velocity.x = move_toward(velocity.x, 0, SPEED)
@@ -172,14 +208,12 @@ func _physics_process(delta: float) -> void:
 	else:
 		walk_phase = lerp_angle(walk_phase, 0.0, 10.0 * delta)
 
-	_handle_auto_crouch()
-	_update_visual_height(delta)
 	_update_collision()
-	_update_smooth_pose(delta)
+	_update_smooth_pose(delta, crouch_analysis)
 	move_and_slide()
 	_process_head_bump(delta)
 	_update_camera_shake()
-	character_drawer.queue_redraw()
+	_queue_redraw_if_needed(delta)
 
 func _handle_input() -> void:
 	if Input.is_action_pressed("ui_up"):
@@ -253,15 +287,12 @@ func _handle_auto_crouch() -> void:
 			if obs_cm < min_obs_h_cm:
 				min_obs_h_cm = obs_cm
 
-	sensors[4].force_raycast_update()
-	if sensors[4].is_colliding():
-		var hit_point = sensors[4].get_collision_point()
-		var ceil_y_px = global_position.y - hit_point.y
-		var ceil_h_cm = ceil_y_px / CM_TO_PX
-		if ceil_h_cm <= m["landmarks"]["top"] + 2.0:
+	_update_ceiling_sensor_cache()
+	if _ceiling_sensor_colliding:
+		if _ceiling_sensor_height_cm <= m["landmarks"]["top"] + 2.0:
 			should_crouch = true
-			if ceil_h_cm < min_obs_h_cm:
-				min_obs_h_cm = ceil_h_cm
+			if _ceiling_sensor_height_cm < min_obs_h_cm:
+				min_obs_h_cm = _ceiling_sensor_height_cm
 
 	if should_crouch:
 		target_crouch_cm = min_obs_h_cm - 8.0
@@ -270,13 +301,13 @@ func _handle_auto_crouch() -> void:
 
 
 func _is_ceiling_blocked() -> bool:
-	sensors[4].force_raycast_update()
-	return sensors[4].is_colliding()
+	_update_ceiling_sensor_cache()
+	return _ceiling_sensor_colliding
 
-func _update_smooth_pose(delta: float) -> void:
+func _update_smooth_pose(delta: float, crouch_analysis: Dictionary = {}) -> void:
 	if m == null or m.is_empty():
 		return
-	var target_d = CharacterPoseCalculator.calculate_pose_data(self, m, CM_TO_PX)
+	var target_d = CharacterPoseCalculator.calculate_pose_data(self, m, CM_TO_PX, crouch_analysis)
 	if smooth_d.is_empty():
 		smooth_d = target_d.duplicate()
 		return
@@ -287,12 +318,11 @@ func _update_smooth_pose(delta: float) -> void:
 	var current_crotch: float = float(smooth_d.get("y_crotch", target_d.get("y_crotch", 0.0)))
 	var target_crotch: float = float(target_d.get("y_crotch", current_crotch))
 	var walk_pose_settled: bool = abs(current_waist - target_waist) < 0.05 and abs(current_crotch - target_crotch) < 4.0
-	const WALK_ANGLE_KEYS = ["leg_l_angle", "leg_r_angle", "arm_l_angle", "arm_r_angle", "knee_l", "knee_r"]
 	for key in target_d:
 		var val = target_d[key]
 		if not (val is float or val is int):
 			continue
-		var t: float = 1.0 if (walk_pose_settled and key in WALK_ANGLE_KEYS) else pose_t
+		var t: float = 1.0 if (walk_pose_settled and key in REDRAW_POSE_KEYS) else pose_t
 		smooth_d[key] = lerp(float(smooth_d.get(key, val)), float(val), t)
 
 func set_pose_immediately(new_pose: String) -> void:
@@ -306,7 +336,7 @@ func _refresh_pose_visual_immediately() -> void:
 	_update_collision()
 	smooth_d = CharacterPoseCalculator.calculate_pose_data(self, m, CM_TO_PX)
 	if character_drawer:
-		character_drawer.queue_redraw()
+		_queue_redraw_if_needed(REDRAW_MIN_INTERVAL_SEC, true)
 
 func _get_target_visual_height_cm() -> float:
 	var target_h_cm = m["height"]
@@ -323,14 +353,10 @@ func _get_target_visual_height_cm() -> float:
 		elif Input.is_key_pressed(KEY_S):
 			target_h_cm *= 0.8
 
-	if sensors.size() > 4 and is_instance_valid(sensors[4]):
-		sensors[4].force_raycast_update()
-		if sensors[4].is_colliding():
-			var hit_point = sensors[4].get_collision_point()
-			var ceil_y_px = global_position.y - hit_point.y
-			var ceil_h_cm = ceil_y_px / CM_TO_PX
-			if target_h_cm > ceil_h_cm - 8.0:
-				target_h_cm = ceil_h_cm - 8.0
+	_update_ceiling_sensor_cache()
+	if _ceiling_sensor_colliding:
+		if target_h_cm > _ceiling_sensor_height_cm - 8.0:
+			target_h_cm = _ceiling_sensor_height_cm - 8.0
 
 	return target_h_cm
 
@@ -417,6 +443,105 @@ func _update_camera_shake() -> void:
 		randf_range(-strength, strength),
 		randf_range(-strength * 0.6, strength * 0.6)
 	)
+
+func _reset_redraw_tracking() -> void:
+	_redraw_elapsed_sec = REDRAW_MIN_INTERVAL_SEC
+	_last_draw_dir = dir
+	_last_draw_facing = ""
+	_last_draw_pose = ""
+	_last_draw_is_walking = false
+	_last_draw_walk_phase = walk_phase
+	_last_draw_visual_height_cm = visual_height_cm
+	_last_draw_look_head_angle = look_head_angle
+	_last_draw_look_pitch = look_pitch
+	_last_draw_pose_values.clear()
+
+func _queue_redraw_if_needed(delta: float, force: bool = false) -> void:
+	if character_drawer == null:
+		return
+	_redraw_elapsed_sec += maxf(delta, 0.0)
+
+	if force:
+		_commit_redraw_state()
+		character_drawer.queue_redraw()
+		_redraw_elapsed_sec = 0.0
+		return
+
+	var should_redraw: bool = _has_significant_redraw_change()
+	if should_redraw:
+		if _redraw_elapsed_sec < REDRAW_MIN_INTERVAL_SEC:
+			return
+	else:
+		if _redraw_elapsed_sec < IDLE_REDRAW_INTERVAL_SEC:
+			return
+
+	_commit_redraw_state()
+	character_drawer.queue_redraw()
+	_redraw_elapsed_sec = 0.0
+
+func _has_significant_redraw_change() -> bool:
+	if _last_draw_pose == "":
+		return true
+	if _last_draw_pose != pose or _last_draw_facing != facing or _last_draw_dir != dir:
+		return true
+	if _last_draw_is_walking != is_walking:
+		return true
+	if abs(_last_draw_visual_height_cm - visual_height_cm) > REDRAW_STATE_HEIGHT_EPS_CM:
+		return true
+	if abs(_last_draw_look_head_angle - look_head_angle) > REDRAW_STATE_ANGLE_EPS:
+		return true
+	if abs(_last_draw_look_pitch - look_pitch) > REDRAW_STATE_PITCH_EPS:
+		return true
+	if is_walking and abs(_last_draw_walk_phase - walk_phase) > REDRAW_STATE_ANGLE_EPS:
+		return true
+
+	for key in REDRAW_POSE_EPS.keys():
+		var current_val: float = float(smooth_d.get(key, 0.0))
+		var previous_val: float = float(_last_draw_pose_values.get(key, current_val))
+		if abs(current_val - previous_val) > float(REDRAW_POSE_EPS[key]):
+			return true
+
+	return false
+
+func _commit_redraw_state() -> void:
+	_last_draw_dir = dir
+	_last_draw_facing = facing
+	_last_draw_pose = pose
+	_last_draw_is_walking = is_walking
+	_last_draw_walk_phase = walk_phase
+	_last_draw_visual_height_cm = visual_height_cm
+	_last_draw_look_head_angle = look_head_angle
+	_last_draw_look_pitch = look_pitch
+	_last_draw_pose_values.clear()
+	for key in REDRAW_POSE_EPS.keys():
+		_last_draw_pose_values[key] = float(smooth_d.get(key, 0.0))
+
+func _invalidate_ceiling_sensor_cache() -> void:
+	_ceiling_sensor_cached_frame = -1
+	_ceiling_sensor_colliding = false
+	_ceiling_sensor_height_cm = INF
+
+func _update_ceiling_sensor_cache() -> void:
+	if sensors.size() <= 4 or not is_instance_valid(sensors[4]):
+		_ceiling_sensor_colliding = false
+		_ceiling_sensor_height_cm = INF
+		_ceiling_sensor_cached_frame = Engine.get_physics_frames()
+		return
+
+	var current_frame: int = Engine.get_physics_frames()
+	if _ceiling_sensor_cached_frame == current_frame:
+		return
+
+	var ceil_ray: RayCast2D = sensors[4]
+	ceil_ray.force_raycast_update()
+	_ceiling_sensor_colliding = ceil_ray.is_colliding()
+	if _ceiling_sensor_colliding:
+		var hit_point: Vector2 = ceil_ray.get_collision_point()
+		var ceil_y_px = global_position.y - hit_point.y
+		_ceiling_sensor_height_cm = ceil_y_px / CM_TO_PX
+	else:
+		_ceiling_sensor_height_cm = INF
+	_ceiling_sensor_cached_frame = current_frame
 
 func _mock_measurements() -> Dictionary:
 	var h = 180.0
