@@ -20,6 +20,7 @@ var _stage_title_prev_id: String = ""
 var minimap_bg: ColorRect
 var minimap_player: ColorRect
 var action_label: Label
+var growth_pain_label: Label
 var stage_title_label: Label
 
 # ポーズメニュー用
@@ -205,7 +206,8 @@ const TERM_HOTSPOTS: Dictionary = {
 		"prompt": "保健室で相談する",
 		"dialogue_npc": "player",
 		"dialogue_key": "term_school_infirmary",
-		"pose": "taiiku_suwari"
+		"pose": "taiiku_suwari",
+		"repeatable": true
 	},
 	"station_bench": {
 		"stage_id": "station",
@@ -1326,6 +1328,14 @@ func _trigger_term_hotspot(hotspot_id: String) -> void:
 	if already_done:
 		dialogue_npc = String(hotspot_data.get("repeat_dialogue_npc", dialogue_npc))
 		dialogue_key = String(hotspot_data.get("repeat_dialogue_key", ""))
+	if hotspot_id == "school_infirmary":
+		var had_growth_pain: bool = global.has_method("is_growth_pain_active") and bool(global.is_growth_pain_active())
+		if global.has_method("cure_growth_pain"):
+			global.cure_growth_pain()
+		_update_actions_hud()
+		if had_growth_pain:
+			_start_dialogue("nurse", "growth_pain_cure")
+			return
 	if dialogue_key != "":
 		_start_dialogue(dialogue_npc, dialogue_key)
 	elif pose_name != "" and pose_name != "chair_sit":
@@ -2480,6 +2490,20 @@ func _setup_ui():
 	action_label.add_theme_constant_override("outline_size", 4)
 	ui_layer.add_child(action_label)
 
+	growth_pain_label = Label.new()
+	growth_pain_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	growth_pain_label.offset_left = -360
+	growth_pain_label.offset_top = 40
+	growth_pain_label.offset_right = -20
+	growth_pain_label.offset_bottom = 68
+	growth_pain_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	growth_pain_label.add_theme_font_size_override("font_size", 15)
+	growth_pain_label.add_theme_color_override("font_color", Color(1.0, 0.84, 0.72))
+	growth_pain_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	growth_pain_label.add_theme_constant_override("outline_size", 4)
+	growth_pain_label.hide()
+	ui_layer.add_child(growth_pain_label)
+
 	stage_title_label = Label.new()
 	stage_title_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	stage_title_label.offset_left = 240
@@ -2634,7 +2658,7 @@ func _on_fast_travel_pressed(stage_id: String) -> void:
 		return
 	_toggle_pause()
 	global.current_stage_id = resolved_stage_id
-	global.actions_today += 1
+	_consume_action(global)
 	_update_actions_hud()
 	_load_stage()
 	# myroomへのファストトラベル: ベッド(x=30〜230cm)を避けてスポーン
@@ -2782,6 +2806,10 @@ func _run_sleep_transition() -> void:
 	var global = get_node_or_null("/root/Global")
 	if not global:
 		return
+	var was_growth_pain_active: bool = global.has_method("is_growth_pain_active") and bool(global.is_growth_pain_active())
+	var apply_growth_pain_after_sleep: bool = false
+	var growth_pain_duration: int = 3
+	var cured_growth_pain_by_rest: bool = false
 	var fade = ColorRect.new()
 	fade.color = Color(0, 0, 0, 0)
 	fade.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -2798,12 +2826,20 @@ func _run_sleep_transition() -> void:
 		if intense:
 			pain_key = "growing_pain_sleep_intense"
 			global.set_meta("growth_pain_intense", false)
+			growth_pain_duration = 5
 		else:
 			pain_key = "growing_pain_sleep"
+			growth_pain_duration = 3
 		global.growth_pain_pending = false
+		apply_growth_pain_after_sleep = true
 		_in_sleep_dialogue_wait = true
 		_start_dialogue("narrator", pain_key)
 		await _wait_for_dialogue_end()
+	if apply_growth_pain_after_sleep and global.has_method("apply_growth_pain"):
+		global.apply_growth_pain(growth_pain_duration)
+	elif was_growth_pain_active and global.has_method("cure_growth_pain"):
+		global.cure_growth_pain()
+		cured_growth_pain_by_rest = true
 	var target_stage_id: String = _resolve_stage_id(_sleep_return_stage_id)
 	if not StageBuilder.STAGES.has(target_stage_id):
 		target_stage_id = "myroom"
@@ -2825,6 +2861,8 @@ func _run_sleep_transition() -> void:
 	_sleep_return_stage_id = "myroom"
 	_sleep_return_position_cm = 260.0
 	_update_actions_hud()
+	if cured_growth_pain_by_rest:
+		_show_mood_feedback("休んだら成長痛が和らいだ", true)
 	var tw_out = create_tween()
 	tw_out.tween_property(fade, "color:a", 0.0, 0.45)
 	await tw_out.finished
@@ -3016,12 +3054,22 @@ func _on_skip_term_pressed() -> void:
 		player.call("update_measurements")
 	_load_stage()
 
+func _consume_action(global: Node, amount: int = 1) -> void:
+	if global == null or amount <= 0:
+		return
+	global.actions_today += amount
+	if global.has_method("tick_growth_pain"):
+		for _i in range(amount):
+			global.tick_growth_pain()
+
 func _update_actions_hud() -> void:
 	if not action_label:
 		return
 	var global = get_node_or_null("/root/Global")
 	if not global:
 		action_label.text = ""
+		if growth_pain_label:
+			growth_pain_label.hide()
 		return
 	var term_label: String = Global.get_school_term_label(int(global.age), int(global.term))
 	var day_in_term: int = int(global.day_in_term)
@@ -3041,6 +3089,14 @@ func _update_actions_hud() -> void:
 	else:
 		_last_soft_limit_notice_key = ""
 	action_label.add_theme_color_override("font_color", font_color)
+	if growth_pain_label:
+		var is_growth_pain_active: bool = global.has_method("is_growth_pain_active") and bool(global.is_growth_pain_active())
+		if is_growth_pain_active:
+			var remain_actions: int = int(global.growth_pain_actions)
+			growth_pain_label.text = "成長痛: 残り%d行動" % remain_actions
+			growth_pain_label.show()
+		else:
+			growth_pain_label.hide()
 
 
 func _update_ui():
@@ -3476,7 +3532,7 @@ func _enter_edge_transition(target_stage: String) -> void:
 	var from_stage_id: String = String(global.current_stage_id)
 	_edge_transition_running = true
 	global.current_stage_id = resolved_target
-	global.actions_today += 1
+	_consume_action(global)
 	_nearby_bed = false
 	_nearby_tent_rest = false
 	_update_actions_hud()
@@ -3828,7 +3884,7 @@ func _enter_transition_door() -> void:
 	if global:
 		from_stage_id = global.current_stage_id
 		global.current_stage_id = new_stage_id
-		global.actions_today += 1
+		_consume_action(global)
 		_update_actions_hud()
 
 	_nearby_transition_door = ""
