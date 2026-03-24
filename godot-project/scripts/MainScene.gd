@@ -2829,6 +2829,10 @@ func _run_sleep_transition() -> void:
 	if not StageBuilder.STAGES.has(target_stage_id):
 		target_stage_id = "myroom"
 	var wake_position_cm: float = _sleep_return_position_cm
+	# 家に入れない身長の場合、公園のテントにリダイレクト
+	if (target_stage_id == "myroom" or target_stage_id == "room") and _is_too_big_for_house_rest(global):
+		target_stage_id = "park"
+		wake_position_cm = 1660.0
 	if StageBuilder.STAGES.has(target_stage_id):
 		var stage_width_cm: float = float(StageBuilder.STAGES[target_stage_id]["width"])
 		wake_position_cm = clamp(wake_position_cm, 50.0, stage_width_cm - 50.0)
@@ -3034,10 +3038,16 @@ func _on_skip_term_pressed() -> void:
 	# 学期末測定イベントをキューに積む（term_end_measurementと同じ流れ）
 	if not global.has_pending_event("term_end_measurement"):
 		global.queue_event("term_end_measurement")
-	global.current_stage_id = "myroom"
+	if _is_too_big_for_house_rest(global):
+		global.current_stage_id = "park"
+	else:
+		global.current_stage_id = "myroom"
 	if player and player.has_method("update_measurements"):
 		player.call("update_measurements")
 	_load_stage()
+	# 巨大テントにワープした場合、テント中央に配置
+	if player and global.current_stage_id == "park":
+		player.position = Vector2(1660.0 * p, 0)
 
 func _consume_action(global: Node, amount: int = 1) -> void:
 	if global == null or amount <= 0:
