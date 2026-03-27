@@ -2,10 +2,11 @@ extends Control
 
 const BACKGROUND_TEXTURE_PATH := "res://assets/thumbnail_TLS_original.png"
 const BACKGROUND_FILL_COLOR := Color("#f4c0ca")
-const BUTTON_AREA := Rect2(0.06, 0.43, 0.34, 0.43)
-const BUTTON_MAX_WIDTH := 420.0
+const BUTTON_AREA := Rect2(0.03, 0.52, 0.28, 0.35)
+const BUTTON_GAP := 29.0
+const BUTTON_MAX_WIDTH := 320.0
 const BUTTON_MIN_HEIGHT := 68.0
-const BUTTON_MIN_TOTAL_HEIGHT := 220.0
+const BUTTON_MIN_TOTAL_HEIGHT := 280.0
 
 var _background_fill: ColorRect
 var _background_rect: TextureRect
@@ -29,7 +30,7 @@ func _ready() -> void:
 	add_child(_background_rect)
 
 	_button_box = VBoxContainer.new()
-	_button_box.add_theme_constant_override("separation", 6)
+	_button_box.add_theme_constant_override("separation", int(BUTTON_GAP))
 	add_child(_button_box)
 
 	_add_button(_button_box, "\u306f\u3058\u3081\u304b\u3089", _on_start_pressed)
