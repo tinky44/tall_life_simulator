@@ -4,6 +4,11 @@ const BACKGROUND_TEXTURE_PATH := "res://assets/thumbnail_TLS_original.png"
 const BACKGROUND_FILL_COLOR := Color("#f4c0ca")
 const BUTTON_AREA := Rect2(0.03, 0.52, 0.28, 0.35)
 const BUTTON_GAP := 29.0
+const BUTTON_BASE_COLOR := Color("#1b3f6b")
+const BUTTON_HOVER_COLOR := Color("#29578f")
+const BUTTON_PRESSED_COLOR := Color("#14304f")
+const BUTTON_BORDER_COLOR := Color("#86a9d7")
+const BUTTON_TEXT_COLOR := Color("#f3f7ff")
 const BUTTON_MAX_WIDTH := 320.0
 const BUTTON_MIN_HEIGHT := 68.0
 const BUTTON_MIN_TOTAL_HEIGHT := 280.0
@@ -82,9 +87,36 @@ func _add_button(parent: Control, label: String, callback: Callable) -> void:
 	button.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.add_theme_font_size_override("font_size", 26)
+	button.add_theme_color_override("font_color", BUTTON_TEXT_COLOR)
+	button.add_theme_color_override("font_hover_color", BUTTON_TEXT_COLOR)
+	button.add_theme_color_override("font_pressed_color", BUTTON_TEXT_COLOR)
+	button.add_theme_color_override("font_focus_color", BUTTON_TEXT_COLOR)
+	button.add_theme_stylebox_override("normal", _make_button_style(BUTTON_BASE_COLOR))
+	button.add_theme_stylebox_override("hover", _make_button_style(BUTTON_HOVER_COLOR))
+	button.add_theme_stylebox_override("pressed", _make_button_style(BUTTON_PRESSED_COLOR))
+	button.add_theme_stylebox_override("focus", _make_button_style(BUTTON_HOVER_COLOR))
 	button.focus_mode = Control.FOCUS_NONE
 	button.pressed.connect(callback)
 	parent.add_child(button)
+
+
+func _make_button_style(fill_color: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = fill_color
+	style.border_width_left = 2
+	style.border_width_top = 2
+	style.border_width_right = 2
+	style.border_width_bottom = 2
+	style.border_color = BUTTON_BORDER_COLOR
+	style.corner_radius_top_left = 10
+	style.corner_radius_top_right = 10
+	style.corner_radius_bottom_right = 10
+	style.corner_radius_bottom_left = 10
+	style.content_margin_left = 12
+	style.content_margin_right = 12
+	style.content_margin_top = 8
+	style.content_margin_bottom = 8
+	return style
 
 
 func _on_start_pressed() -> void:
