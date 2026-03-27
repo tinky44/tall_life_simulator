@@ -13,9 +13,15 @@ const BUTTON_MAX_WIDTH := 320.0
 const BUTTON_MIN_HEIGHT := 68.0
 const BUTTON_MIN_TOTAL_HEIGHT := 280.0
 
+# 右下の Godot ロゴのクリック領域（画像比率）
+const GODOT_LOGO_AREA := Rect2(0.88, 0.88, 0.12, 0.12)
+const LICENCE_PATH := "res://godot_licence.txt"
+
 var _background_fill: ColorRect
 var _background_rect: TextureRect
 var _button_box: VBoxContainer
+var _godot_btn: Button
+var _licence_overlay: Control
 
 
 func _ready() -> void:
@@ -42,6 +48,14 @@ func _ready() -> void:
 	_add_button(_button_box, "\u7d9a\u304d\u304b\u3089", _on_continue_pressed)
 	_add_button(_button_box, "\u3084\u3081\u308b", _on_exit_pressed)
 
+	# 右下 Godot ロゴ用の透明ボタン
+	_godot_btn = Button.new()
+	_godot_btn.flat = true
+	_godot_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_godot_btn.focus_mode = Control.FOCUS_NONE
+	_godot_btn.pressed.connect(_on_godot_btn_pressed)
+	add_child(_godot_btn)
+
 	resized.connect(_update_layout)
 	call_deferred("_update_layout")
 
@@ -51,11 +65,12 @@ func _update_layout() -> void:
 		return
 
 	var image_rect := _get_displayed_background_rect()
+
+	# メインボタン群
 	var target_pos := image_rect.position + image_rect.size * BUTTON_AREA.position
 	var target_size := image_rect.size * BUTTON_AREA.size
 	var width := minf(target_size.x, BUTTON_MAX_WIDTH)
 	var height := maxf(target_size.y, BUTTON_MIN_TOTAL_HEIGHT)
-
 	_button_box.position = target_pos
 	_button_box.size = Vector2(width, height)
 
@@ -64,6 +79,13 @@ func _update_layout() -> void:
 		if button == null:
 			continue
 		button.custom_minimum_size = Vector2(0.0, BUTTON_MIN_HEIGHT)
+
+	# Godot ロゴボタン
+	if _godot_btn != null:
+		var logo_pos := image_rect.position + image_rect.size * GODOT_LOGO_AREA.position
+		var logo_size := image_rect.size * GODOT_LOGO_AREA.size
+		_godot_btn.position = logo_pos
+		_godot_btn.size = logo_size
 
 
 func _get_displayed_background_rect() -> Rect2:
@@ -117,6 +139,70 @@ func _make_button_style(fill_color: Color) -> StyleBoxFlat:
 	style.content_margin_top = 8
 	style.content_margin_bottom = 8
 	return style
+
+
+func _on_godot_btn_pressed() -> void:
+	if _licence_overlay != null:
+		return
+
+	var text := ""
+	if FileAccess.file_exists(LICENCE_PATH):
+		var f := FileAccess.open(LICENCE_PATH, FileAccess.READ)
+		text = f.get_as_text()
+		f.close()
+
+	# 半透明オーバーレイ
+	_licence_overlay = Control.new()
+	_licence_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_licence_overlay)
+
+	var dim := ColorRect.new()
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.color = Color(0, 0, 0, 0.75)
+	_licence_overlay.add_child(dim)
+
+	# パネル（中央寄せ）
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.custom_minimum_size = Vector2(520, 400)
+	panel.set_anchor(SIDE_LEFT, 0.5)
+	panel.set_anchor(SIDE_RIGHT, 0.5)
+	panel.set_anchor(SIDE_TOP, 0.5)
+	panel.set_anchor(SIDE_BOTTOM, 0.5)
+	panel.set_offset(SIDE_LEFT, -260)
+	panel.set_offset(SIDE_RIGHT, 260)
+	panel.set_offset(SIDE_TOP, -220)
+	panel.set_offset(SIDE_BOTTOM, 220)
+	_licence_overlay.add_child(panel)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 8)
+	panel.add_child(vbox)
+
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.custom_minimum_size = Vector2(0, 320)
+	vbox.add_child(scroll)
+
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", 13)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(label)
+
+	var close_btn := Button.new()
+	close_btn.text = "閉じる"
+	close_btn.add_theme_font_size_override("font_size", 20)
+	close_btn.focus_mode = Control.FOCUS_NONE
+	close_btn.pressed.connect(_close_licence_overlay)
+	vbox.add_child(close_btn)
+
+
+func _close_licence_overlay() -> void:
+	if _licence_overlay != null:
+		_licence_overlay.queue_free()
+		_licence_overlay = null
 
 
 func _on_start_pressed() -> void:
