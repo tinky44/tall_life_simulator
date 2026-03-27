@@ -473,13 +473,13 @@ const DATA: Dictionary = {
 		"growth_sleep_warning": [
 			{"speaker": "主人公（心の声）", "text": "……急に、どっと眠気が来た。"},
 			{"speaker": "主人公（心の声）", "text": "体が重い。目が開かない。"},
-			{"speaker": "__choice__", "choices": ["今すぐ帰って寝る", "もう少し頑張る"]},
+			{"speaker": "", "choices": ["今すぐ帰って寝る", "もう少し頑張る"]},
 		],
 		"growth_supplement_found": [
 			{"speaker": "主人公", "text": "自動販売機の取り出し口に、何かある……"},
 			{"speaker": "主人公", "text": "『怪しい成長サプリ』？"},
 			{"speaker": "主人公（心の声）", "text": "……飲むか？"},
-			{"speaker": "__choice__", "choices": ["飲む", "捨てる"]},
+			{"speaker": "", "choices": ["飲む", "捨てる"]},
 		],
 	},
 	"park_vendor": {

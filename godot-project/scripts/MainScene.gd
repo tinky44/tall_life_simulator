@@ -2645,10 +2645,9 @@ func _on_fast_travel_pressed(stage_id: String) -> void:
 	global.current_stage_id = resolved_stage_id
 	_consume_action(global)
 	_update_actions_hud()
-	_load_stage()
 	# myroomへのファストトラベル: ベッド(x=30〜230cm)を避けてスポーン
-	if player and resolved_stage_id == "myroom":
-		player.position = Vector2(260 * p, 0)
+	var ft_spawn_cm := 260.0 if resolved_stage_id == "myroom" else 100.0
+	_load_stage(ft_spawn_cm)
 
 func _setup_sleep_menu() -> void:
 	if sleep_menu:
@@ -2829,17 +2828,19 @@ func _run_sleep_transition() -> void:
 	if not StageBuilder.STAGES.has(target_stage_id):
 		target_stage_id = "myroom"
 	var wake_position_cm: float = _sleep_return_position_cm
+	# 家に入れない身長の場合、公園のテントにリダイレクト
+	if (target_stage_id == "myroom" or target_stage_id == "room") and _is_too_big_for_house_rest(global):
+		target_stage_id = "park"
+		wake_position_cm = 1660.0
 	if StageBuilder.STAGES.has(target_stage_id):
 		var stage_width_cm: float = float(StageBuilder.STAGES[target_stage_id]["width"])
 		wake_position_cm = clamp(wake_position_cm, 50.0, stage_width_cm - 50.0)
 	global.current_stage_id = target_stage_id
 	if player and player.has_method("update_measurements"):
 		player.call("update_measurements")
-	await _load_stage()
-	# 起床後のスポーン位置をベッド(x=30〜230cm)の右隣に設定
+	await _load_stage(wake_position_cm)
 	# 高身長時は天井との衝突で押し出しが発生するため、1フレーム衝突を無効化してから戻す
 	if player:
-		player.position = Vector2(wake_position_cm * p, 0)
 		player.collision_shape.disabled = true
 		await get_tree().process_frame
 		player.collision_shape.disabled = false
@@ -3034,10 +3035,14 @@ func _on_skip_term_pressed() -> void:
 	# 学期末測定イベントをキューに積む（term_end_measurementと同じ流れ）
 	if not global.has_pending_event("term_end_measurement"):
 		global.queue_event("term_end_measurement")
-	global.current_stage_id = "myroom"
+	if _is_too_big_for_house_rest(global):
+		global.current_stage_id = "park"
+	else:
+		global.current_stage_id = "myroom"
 	if player and player.has_method("update_measurements"):
 		player.call("update_measurements")
-	_load_stage()
+	var grade_spawn_cm := 1660.0 if global.current_stage_id == "park" else 260.0
+	_load_stage(grade_spawn_cm)
 
 func _consume_action(global: Node, amount: int = 1) -> void:
 	if global == null or amount <= 0:
@@ -3310,7 +3315,7 @@ func _handle_pending_stage_event(global: Node, stage_id: String, ev: String) -> 
 			return false
 	return false
 
-func _load_stage():
+func _load_stage(spawn_cm: float = 100.0):
 	var global = get_node_or_null("/root/Global")
 	var stage_id = global.current_stage_id if global else "myroom"
 	stage_id = _resolve_stage_id(String(stage_id))
@@ -3342,7 +3347,7 @@ func _load_stage():
 		global.save_slot(global.current_slot)
 
 	if player:
-		player.position = Vector2(100 * p, 0)
+		player.position = Vector2(spawn_cm * p, 0)
 		var cam = player.get_node_or_null("Camera2D")
 		if cam:
 			var stage_width_px := int(float(StageBuilder.STAGES[stage_id]["width"]) * p) if StageBuilder.STAGES.has(stage_id) else 0
@@ -3425,9 +3430,7 @@ func _trigger_too_big_for_house() -> void:
 	await tw.finished
 	# outdoorへ遷移
 	global.current_stage_id = "outdoor"
-	await _load_stage()
-	if player:
-		player.position = Vector2(80 * p, 0)
+	await _load_stage(80.0)
 	# フェードイン
 	var tw_out = create_tween()
 	tw_out.tween_property(fade, "color:a", 0.0, 0.5)
@@ -3457,9 +3460,7 @@ func _trigger_too_big_for_school(stage_id: String) -> void:
 	var suffix = StageBuilder._get_stage_suffix_from_stage_id(stage_id)
 	var target = "schoolyard_%s" % suffix
 	global.current_stage_id = target
-	await _load_stage()
-	if player:
-		player.position = Vector2(300 * p, 0)
+	await _load_stage(300.0)
 	var tw_out = create_tween()
 	tw_out.tween_property(fade, "color:a", 0.0, 0.5)
 	await tw_out.finished
@@ -3485,9 +3486,7 @@ func _trigger_too_big_for_station() -> void:
 	await tw.finished
 	# 屋外（街）へ遷移
 	global.current_stage_id = "outdoor"
-	await _load_stage()
-	if player:
-		player.position = Vector2(80 * p, 0)
+	await _load_stage(80.0)
 	var tw_out = create_tween()
 	tw_out.tween_property(fade, "color:a", 0.0, 0.5)
 	await tw_out.finished
@@ -3511,21 +3510,20 @@ func _enter_edge_transition(target_stage: String) -> void:
 	_nearby_bed = false
 	_nearby_tent_rest = false
 	_update_actions_hud()
-	await _load_stage()
-	if player:
-		var stage_width = float(StageBuilder.STAGES[resolved_target]["width"])
-		var spawn_x = 80.0
-		if from_stage_id == "outdoor" and resolved_target == "park":
-			spawn_x = stage_width - 120.0
-		elif from_stage_id == "park" and resolved_target == "outdoor":
-			spawn_x = 80.0
-		elif from_stage_id == "adjacent_town" and resolved_target == "outdoor":
-			spawn_x = stage_width - 80.0
-		elif from_stage_id == "station" and resolved_target == "platform":
-			spawn_x = 270.0  # ホーム左側に到着
-		elif from_stage_id == "platform" and resolved_target == "station":
-			spawn_x = stage_width - 260.0  # 駅右側に到着
-		player.position = Vector2(spawn_x * p, 0)
+	# スポーン位置を事前計算
+	var stage_width = float(StageBuilder.STAGES[resolved_target]["width"])
+	var spawn_x = 80.0
+	if from_stage_id == "outdoor" and resolved_target == "park":
+		spawn_x = stage_width - 120.0
+	elif from_stage_id == "park" and resolved_target == "outdoor":
+		spawn_x = 80.0
+	elif from_stage_id == "adjacent_town" and resolved_target == "outdoor":
+		spawn_x = stage_width - 80.0
+	elif from_stage_id == "station" and resolved_target == "platform":
+		spawn_x = 270.0  # ホーム左側に到着
+	elif from_stage_id == "platform" and resolved_target == "station":
+		spawn_x = stage_width - 260.0  # 駅右側に到着
+	await _load_stage(spawn_x)
 	_edge_transition_running = false
 	# ランダム睡眠チェック（成長期の眠気）— 屋外系ステージのみ
 	if resolved_target in ["outdoor", "park", "adjacent_town"] \
@@ -3865,32 +3863,10 @@ func _enter_transition_door() -> void:
 	_nearby_transition_door = ""
 	_nearby_bed = false
 	_nearby_tent_rest = false
-	await _load_stage()
 
-	# 遷移先の「戻り口ドア」の近くにスポーン
-	if player and from_stage_id != "" and StageBuilder.STAGES.has(new_stage_id):
-		var return_door_id = "door_to_" + from_stage_id
-		var stage_width = float(StageBuilder.STAGES[new_stage_id]["width"])
-		var cur_age = global.age if global else 0
-		var spawned := false
-		for obs in StageBuilder.get_obstacles(new_stage_id, cur_age):
-			if obs["id"] == return_door_id:
-				var obs_x = float(obs["x"])
-				var obs_x2 = float(obs["x2"])
-				var obs_center = (obs_x + obs_x2) / 2.0
-				var spawn_x: float
-				# ドアが右半分 → 左に出現、左半分 → 右に出現
-				if obs_center > stage_width / 2.0:
-					spawn_x = obs_x - 50.0
-				else:
-					spawn_x = obs_x2 + 50.0
-				spawn_x = clamp(spawn_x, 50.0, stage_width - 50.0)
-				player.position = Vector2(spawn_x * p, 0)
-				spawned = true
-				break
-		# station には door_to_platform を置かない設計なので、platform から戻る時は右側に出す
-		if not spawned and new_stage_id == "station" and from_stage_id == "platform":
-			player.position = Vector2((stage_width - 260.0) * p, 0)
+	# スポーン位置を事前計算（_load_stage 内のイベント処理前に正しい位置を設定するため）
+	var spawn_cm := _calc_door_spawn_cm(new_stage_id, from_stage_id, global)
+	await _load_stage(spawn_cm)
 	# ランダム睡眠チェック（成長期の眠気）— 屋外系ステージのみ
 	if new_stage_id in ["outdoor", "park", "adjacent_town"] \
 			and global and not _in_dialogue and not _in_sleep_dialogue_wait \
@@ -3898,6 +3874,28 @@ func _enter_transition_door() -> void:
 		# カメラがプレイヤーに追従するまで待つ
 		await get_tree().create_timer(0.3).timeout
 		_start_dialogue("narrator", "growth_sleep_warning")
+
+func _calc_door_spawn_cm(new_stage_id: String, from_stage_id: String, global: Node) -> float:
+	if from_stage_id == "" or not StageBuilder.STAGES.has(new_stage_id):
+		return 100.0
+	var return_door_id = "door_to_" + from_stage_id
+	var stage_width = float(StageBuilder.STAGES[new_stage_id]["width"])
+	var cur_age = global.age if global else 0
+	for obs in StageBuilder.get_obstacles(new_stage_id, cur_age):
+		if obs["id"] == return_door_id:
+			var obs_x = float(obs["x"])
+			var obs_x2 = float(obs["x2"])
+			var obs_center = (obs_x + obs_x2) / 2.0
+			var spawn_x: float
+			if obs_center > stage_width / 2.0:
+				spawn_x = obs_x - 50.0
+			else:
+				spawn_x = obs_x2 + 50.0
+			return clamp(spawn_x, 50.0, stage_width - 50.0)
+	# station には door_to_platform を置かない設計なので、platform から戻る時は右側に出す
+	if new_stage_id == "station" and from_stage_id == "platform":
+		return stage_width - 260.0
+	return 100.0
 
 # ─── 成長システム ───────────────────────────────────────────────
 
@@ -4167,7 +4165,7 @@ func _on_close_measurement_pressed() -> void:
 			global.current_stage_id = "myroom"
 		if player and player.has_method("update_measurements"):
 			player.call("update_measurements")
-		_load_stage()
+		_load_stage(260.0)
 		return
 	if global and global.haruka_following:
 		global.haruka_following = false
@@ -4214,7 +4212,7 @@ func _on_next_term_pressed() -> void:
 	if player:
 		player.update_measurements()
 
-	_load_stage()
+	_load_stage(260.0)
 
 	# 黒画面中に学期テキストを表示
 	if global:

@@ -76,6 +76,7 @@ tall_life_simulator/
 
 このゲームはGodot Engineを利用して制作されました。
 
+```
 This game uses Godot Engine, available under the following license:
 
 Copyright (c) 2014-present Godot Engine contributors.
@@ -98,6 +99,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+```
 ---
 
 *Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>*
